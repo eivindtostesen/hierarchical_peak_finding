@@ -7,6 +7,8 @@ Created on Wed Mar 24 14:49:04 2021.
 
 """
 
+import itertools as it
+
 
 def filter_local_extrema(sequence):
     previous = None
@@ -55,15 +57,17 @@ class PeakTree:
         return len(self.elevation)
 
     def __str__(self):
-        str = "# Notation: <father> (& <mother>) => <successor>\n"
-        for full in self._full.values():
+        str = "# Notation: <father> /& <mother>/ => <successor>\n"
+        for full in it.chain([self.root()], self.foremothers(self.root())):
             if not self.has_parents(full):
                 continue
-            for peak in self.successors(self.mode(full), self.father(full)):
-                str += f'{peak} (& {self.mother(self.successor(peak))}) => '
+            for peak in self.path(self.mode(full),
+                                  self.father(full),
+                                  self.successor):
+                str += f'{peak} /& {self.mother(self.successor(peak))}/ => '
             str += f'{full}\n'
-        return str
 
+        return str
 
     def root(self):
         return self._root
@@ -109,32 +113,32 @@ class PeakTree:
                 climber = self.successor(climber)
                 yield from self.maxdeep(self.mother(climber), Dmax)
 
-    def successors(self, start, stop=None):
-        climber = start
-        yield climber
-        while (self.is_nonroot(climber)):
-            climber = self.successor(climber)
-            yield climber
-            if climber == stop:
-                break
+    def forefathers(self, peak):
+        if self.has_parents(peak):
+            yield self.father(peak)
+            yield from self.forefathers(self.father(peak))
+            yield from self.forefathers(self.mother(peak))
+
+    def foremothers(self, peak):
+        if self.has_parents(peak):
+            yield self.mother(peak)
+            yield from self.foremothers(self.mother(peak))
+            yield from self.foremothers(self.father(peak))
 
     def ancestors(self, peak):
         yield peak
-        if self.has_parents(peak):
-            yield from self.ancestors(self.father(peak))
-            yield from self.ancestors(self.mother(peak))
+        yield from self.forefathers(peak)
+        yield from self.foremothers(peak)
 
-    def fathers(self, start, stop=None):
+    def path(self, start, stop, step):
         climber = start
         yield climber
-        while (self.has_parents(climber)):
-            climber = self.father(climber)
+        while (climber != stop):
+            climber = step(climber)
             yield climber
-            if climber == stop:
-                break
 
     def paternal_line(self, peak):
-        yield from self.fathers(self.full(peak))
+        yield from self.path(self.full(peak), self.mode(peak), self.father)
 
     # Initialization algorithms:
 
