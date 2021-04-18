@@ -90,11 +90,19 @@ class PeakTree:
         """Return number of nodes in the PeakTree."""
         return len(self.elevation)
 
+    def __mul__(self, other):
+        """Return product with other tree (PeakTree or FrameTree)."""
+        return FrameTree(self, other)
+
     def __str__(self):
         """Return printable tree structure."""
+        return self.as_string(self.root())
+
+    def as_string(self, peak):
+        """Return printable subtree structure."""
         str = "# Notation: <father> /& <mother>/ => <successor>\n"
-        for full in chain([self.root()],
-                          self.foremothers(self.root())
+        for full in chain([peak],
+                          self.foremothers(peak)
                           ):
             if not self.has_parents(full):
                 continue
@@ -254,3 +262,130 @@ class PeakTree:
         """Compute attribute: self._full."""
         self._full = {self.mode(peak): peak for peak in self._mother.values()}
         self._full[self.mode(self._root)] = self._root
+
+
+class FrameTree(PeakTree):
+    """Product tree of hierarchical trees (PeakTrees or FrameTrees).
+
+    Subclass
+    --------
+    From PeakTree, the FrameTree class
+    - overwrites: __init__, __contains__, __iter__, 'is_nonroot',
+      'mode', 'mother', 'root', 'successor',
+    - copies: __str__, as_string, __mul__, 
+    - removes (NotImplemented): height, '_find_full',
+      '_find_mode_father_mother', '_find_successor_and_root',
+      '_propagate_mode'
+
+    Notes
+    -----
+    The subsection titled "2D peaks" in the article [1]_
+    is relevant literature for this FrameTree class.
+
+    References
+    ----------
+    .. [1] Tostesen, E. "A stitch in time: Efficient computation of
+       genomic DNA melting bubbles." Algorithms for Molecular
+       Biology 3, 10 (2008).
+       Open access: https://doi.org/10.1186/1748-7188-3-10
+    """
+
+    def __init__(self, x_tree, y_tree):
+        # test isinstance PeakTree/FrameTree?
+        self.x = x_tree
+        self.y = y_tree
+
+    def __contains__(self, frame):
+        """Return True if the input is a node in the FrameTree."""
+        a, b = frame
+        return (
+                (a == self.x.root()
+                 or
+                 self.x.depth(self.x.successor(a)) > self.y.depth(b)
+                 )
+                and
+                (b == self.y.root()
+                 or
+                 self.y.depth(self.y.successor(b)) > self.x.depth(a)
+                 )
+                )
+
+    def __iter__(self):
+        """Iterate over nodes in the FrameTree."""
+        yield from self.ancestors(self.root())
+
+    def __len__(self):
+        """Return number of nodes in the FrameTree."""
+        return len(self.ancestors(self.root()))
+
+    def root(self):
+        """Return the root node of the FrameTree."""
+        return (self.x.root(), self.y.root())
+
+    def is_nonroot(self, frame):
+        """Return True if the input frame has a successor."""
+        a, b = frame
+        return self.x.is_nonroot(a) or self.y.is_nonroot(b)
+
+    def mode(self, frame):
+        """Return the input frame's top (a leaf node)."""
+        a, b = frame
+        return (self.x.mode(a), self.y.mode(b))
+
+    def has_parents(self, frame):
+        """Return True if the input frame has a father and mother."""
+        a, b = frame
+        return self.x.has_parents(a) or self.y.has_parents(b)
+
+    def height(self, frame):
+        """Return that height is NotImplemented."""
+        return NotImplemented
+
+    def depth(self, frame):
+        """Return the input frame's depth."""
+        a, b = frame
+        d1, d2 = self.x.depth(a), self.y.depth(b)
+        return d1 if d1 > d2 else d2
+
+    def successor(self, frame):
+        """Return the input frame merged with its neighboring frame."""
+        a, b = frame
+        sa = self.x.successor(a) if self.x.is_nonroot(a) else None
+        sb = self.y.successor(b) if self.y.is_nonroot(b) else None
+        if (sa, sb) == (None, None):
+            return None
+        elif (sa is None or self.x.depth(sa) > self.y.depth(sb)):
+            return (a, sb)
+        elif (sb is None or self.x.depth(sa) < self.y.depth(sb)):
+            return (sa, b)
+        else:
+            return (sa, b)
+
+    def father(self, frame):
+        a, b = frame
+        if self.x.depth(a) > self.y.depth(b):
+            return (self.x.father(a), b)
+        else:
+            return (a, self.y.father(b))
+
+    def mother(self, frame):
+        a, b = frame
+        if self.x.depth(a) > self.y.depth(b):
+            return (self.x.mother(a), b)
+        else:
+            return (a, self.y.mother(b))
+
+    def full(self, frame):
+        """Return the largest frame with same mode as the input frame."""
+        climber = frame
+        while self.is_nonroot(climber):
+            nextstep = self.successor(climber)
+            if self.mode(nextstep) == self.mode(climber):
+                climber = nextstep
+            else:
+                break
+        return climber
+
+    def grid(self, frame, Dmax):
+        a, b = frame
+        return (list(self.x.maxdeep(a, Dmax)), list(self.y.maxdeep(b, Dmax)))
