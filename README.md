@@ -6,6 +6,7 @@ The file [hierarchical_peaks.py](hierarchical_peaks.py) is a Python module for d
 ## Howto files
 For documentation of the usage of `hierarchical_peaks`, jupyter notebooks are (or will be) included:
 * [How_to_initialize.ipynb](How_to_initialize.ipynb)
+* [How to plot tree.ipynb](How to plot tree.ipynb)
 
 ## Citation
 Publications should cite the homepage of this software,
