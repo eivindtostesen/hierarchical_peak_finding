@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Docstring for the hierarchical_peaks.py module.
+"""Python module for analysis of peaks in numeric data.
+
+This module contains algorithms for building a binary tree
+representing the hierarchical structure of all peaks in data.
+It also contains methods for searching the tree and selecting peaks.
 
 Created on Wed Mar 24 14:49:04 2021.
 
@@ -44,14 +48,23 @@ def _surf():
 
 
 class PeakTree:
-    """Tree of hierarchical peaks in 1D data.
+    """Binary tree of hierarchical peaks in data.
 
-    Peak finding based on tree algorithms.
+    A PeakTree represents the hierarchical structure of
+    all peaks in a univariate data set (such as a time series,
+    a numeric sequence or a function x -> h).
+
+    A PeakTree is initialized with an iterable of (x,h)-tuples,
+    representing the local extrema in the data set
+    (the alternating maximum and minimum points).
+    
+    The h-values must be numeric (elevation values).
+    The x-values must be unique hashable objects for use as keys.
 
     Notes
     -----
-    The subsection titled "1D peaks" in the article [1]_
-    is relevant literature for the PeakTree class.
+    Recommended literature for the PeakTree class is
+    the subsection titled "1D peaks" in the article [1]_.
 
     References
     ----------
@@ -64,7 +77,8 @@ class PeakTree:
     def __init__(self, maxima_and_minima):
         """Build a PeakTree and compute its data attributes."""
         self.elevation = dict(maxima_and_minima)
-        nodes = sorted(self.elevation)
+        # make use of the preserved insertion order:
+        nodes = list(self.elevation)
         # remove minimum at the beginning:
         if self.elevation[nodes[0]] < self.elevation[nodes[1]]:
             del self.elevation[nodes[0]]
@@ -74,8 +88,8 @@ class PeakTree:
             del self.elevation[nodes[-1]]
             del nodes[-1]
         # compute data attributes:
-        self._find_successor_and_root(nodes)
-        self._find_mode_father_mother(nodes)
+        self._find_successor_and_root()
+        self._find_mode_father_mother()
         self._find_full()
 
     def __contains__(self, peak):
@@ -207,12 +221,12 @@ class PeakTree:
 
     # Initialization algorithms:
 
-    def _find_successor_and_root(self, nodes):
+    def _find_successor_and_root(self):
         """Compute attributes: self._successor and self._root."""
         self._successor = {}
         parents_in_spe = []
         parents = []
-        for peak in nodes:
+        for peak in self.elevation.keys():
             while parents_in_spe:
                 if self.elevation[parents_in_spe[-1]] < self.elevation[peak]:
                     break
@@ -233,11 +247,11 @@ class PeakTree:
             parent = child
         self._root = child
 
-    def _find_mode_father_mother(self, nodes):
+    def _find_mode_father_mother(self):
         """Compute attributes: self._mode, self._father and self._mother."""
         self._father = {}
         self._mother = {}
-        maxima = nodes[0::2]
+        maxima = list(self.elevation)[0::2]
         self._mode = {peak: peak for peak in maxima}
         for peak in maxima:
             self._propagate_mode(peak)
@@ -251,9 +265,16 @@ class PeakTree:
             self._mother[successor] = peak
             hf = self.height(self.father(successor))
             hm = self.height(self.mother(successor))
-            if hf < hm or (hf == hm and peak > self.father(successor)):
+            if hf < hm:
                 self._mother[successor] = self._father[successor]
                 self._father[successor] = peak
+            elif hf == hm:
+                # to access the preserved insertion order:
+                i = list(self.elevation).index(peak)
+                j = list(self.elevation).index(self.father(successor))
+                if i > j:
+                    self._mother[successor] = self._father[successor]
+                    self._father[successor] = peak
             self._mode[successor] = self.mode(self.father(successor))
             if self.is_nonroot(successor):
                 self._propagate_mode(successor)
@@ -265,7 +286,17 @@ class PeakTree:
 
 
 class FrameTree(PeakTree):
-    """Product tree of hierarchical trees (PeakTrees or FrameTrees).
+    """Binary tree of higher-dimensional hierarchical peaks.
+
+    A FrameTree represents the hierarchical structure of
+    peaks in more dimensions (such as a "mountain" landscape
+    with height z as a function of x and y). It is based on
+    an assumption of decoupling: The height function z(x,y)
+    is a sum f(x) + g(y) or a product f(x) * g(y).
+
+    A Frametree is constructed as a pair of lower-dimensional
+    trees (of type PeakTree or Frametree). It is a kind of
+    product tree, but it is not the Cartesian product.
 
     Subclass
     --------
@@ -279,8 +310,8 @@ class FrameTree(PeakTree):
 
     Notes
     -----
-    The subsection titled "2D peaks" in the article [1]_
-    is relevant literature for this FrameTree class.
+    Recommended literature for the FrameTree class is
+    the subsection titled "2D peaks" in the article [1]_.
 
     References
     ----------
@@ -291,7 +322,6 @@ class FrameTree(PeakTree):
     """
 
     def __init__(self, x_tree, y_tree):
-        # test isinstance PeakTree/FrameTree?
         self.x = x_tree
         self.y = y_tree
 

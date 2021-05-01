@@ -9,11 +9,11 @@ For documentation of the usage of `hierarchical_peaks`, jupyter notebooks are (o
 * [How_to_plot_tree.ipynb](How_to_plot_tree.ipynb)
 
 ## Citation
-Publications should cite the homepage of this software,
+In publications, please cite the current homepage of this software,
 
 * https://github.com/eivindtostesen/hierarchical_peak_finding
 
-and this open-access article that explains the methods behind:
+and this open-access article:
 
 >Tøstesen, E.
 >A stitch in time: Efficient computation of genomic DNA melting bubbles.
