@@ -34,6 +34,15 @@ def _pairwise(iterable):
         a = b
 
 
+def _tripletwise(iterable):
+    """Yield nearest neighbor triplets."""
+    it = iter(iterable)
+    a, b = next(it), next(it)
+    for c in it:
+        yield a, b, c
+        a, b = b, c
+
+
 # Functions:
 
 
@@ -53,7 +62,7 @@ def filter_local_extrema(datapoints):
 
 
 def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
-    """Return (start, end)-locations for all the input peaks."""
+    """Return dict of (start, end)-locations for the input peaks."""
     # defaults:
     if revpeaks is None:
         peakpoints, revpeaks = _forward_backward(peakpoints)
@@ -81,7 +90,7 @@ def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
     startdict = trace(revcurve, peakpoints)
     enddict = trace(curvepoints, revpeaks)
     # return location intervals:
-    return {x: (startdict[x], enddict[x]) for x in startdict}
+    return {x: (startdict[x], enddict[x]) for x in enddict}
 
 
 # Classes:
@@ -235,21 +244,30 @@ class PeakTree:
         """Yield nodes on the path from the input node to the root."""
         yield from self.path(node, self.root(), self.successor)
 
-    def ancestors(self, localroot):
+    def ancestors(self, localroot=None):
         """Yield all nodes in the input node's subtree."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
         yield localroot
         yield from self.forefathers(localroot)
         yield from self.foremothers(localroot)
 
-    def forefathers(self, localroot):
+    def forefathers(self, localroot=None):
         """Yield fathers in the input node's subtree."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
         if self.has_parents(localroot):
             yield self.father(localroot)
             yield from self.forefathers(self.father(localroot))
             yield from self.forefathers(self.mother(localroot))
 
-    def foremothers(self, localroot):
+    def foremothers(self, localroot=None):
         """Yield mothers in the input node's subtree."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
         if self.has_parents(localroot):
             yield self.mother(localroot)
             yield from self.foremothers(self.mother(localroot))
@@ -261,9 +279,10 @@ class PeakTree:
 
     def maxdeep(self, Dmax=3.0, localroot=None):
         """Yield nodes in subtree according to a maximum depth."""
+        # defaults:
         if localroot is None:
-            # set default:
             localroot = self.root()
+        # maxdeep algorithm:
         if self.depth(localroot) < Dmax:
             yield localroot
         else:
@@ -395,19 +414,23 @@ class FrameTree(PeakTree):
 
     def __iter__(self):
         """Iterate over nodes in the FrameTree."""
-        yield from self.ancestors(self.root())
+        yield from self.ancestors()
 
     def __len__(self):
         """Return number of nodes in the FrameTree."""
-        return len(self.ancestors(self.root()))
+        return len(list(self.ancestors()))
 
     def maxima(self):
-        """Return that maxima is NotImplemented."""
-        return NotImplemented
+        """Yield leaf nodes (local maxima)."""
+        for a in self.x.maxima():
+            for b in self.y.maxima():
+                yield a, b
 
     def minima(self):
-        """Return that minima is NotImplemented."""
-        return NotImplemented
+        """Yield local minima."""
+        for a in self.x.minima():
+            for b in self.y.minima():
+                yield a, b
 
     def root(self):
         """Return the root node of the FrameTree."""
@@ -430,6 +453,7 @@ class FrameTree(PeakTree):
 
     def height(self, frame):
         """Return that height is NotImplemented."""
+        # todo ? sum of heights
         return NotImplemented
 
     def depth(self, frame):
@@ -441,16 +465,20 @@ class FrameTree(PeakTree):
     def successor(self, frame):
         """Return the input frame merged with its neighboring frame."""
         a, b = frame
-        sa = self.x.successor(a) if self.x.is_nonroot(a) else None
-        sb = self.y.successor(b) if self.y.is_nonroot(b) else None
-        if (sa, sb) == (None, None):
+        if self.x.is_nonroot(a) and self.y.is_nonroot(b):
+            sa, sb = self.x.successor(a), self.y.successor(b)
+            if self.x.depth(sa) > self.y.depth(sb):
+                return (a, sb)
+            else:
+                return (sa, b)
+        elif not self.x.is_nonroot(a) and not self.y.is_nonroot(b):
             return None
-        elif (sa is None or self.x.depth(sa) > self.y.depth(sb)):
-            return (a, sb)
-        elif (sb is None or self.x.depth(sa) < self.y.depth(sb)):
-            return (sa, b)
+        elif self.x.is_nonroot(a):
+            # then b is root
+            return (self.x.successor(a), b)
         else:
-            return (sa, b)
+            # then a is root and b nonroot
+            return (a, self.y.successor(b))
 
     def father(self, frame):
         """Return the input frame's father subframe."""
@@ -484,10 +512,15 @@ class FrameTree(PeakTree):
         a, b = frame
         return self.x.index(a), self.y.index(b)
 
-    def grid(self, frame, Dmax):
-        """Return grid frames contained in the input frame."""
-        a, b = frame
-        return (list(self.x.maxdeep(a, Dmax)), list(self.y.maxdeep(b, Dmax)))
+    def maxdeep(self, Dmax=3.0, localroot=None):
+        """Yield grid frames contained in the input frame."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        rx, ry = localroot
+        for a in self.x.maxdeep(Dmax, rx):
+            for b in self.y.maxdeep(Dmax, ry):
+                yield a, b
 
     def _find_successor_and_root(self):
         """Return that _find_successor_and_root is NotImplemented."""
