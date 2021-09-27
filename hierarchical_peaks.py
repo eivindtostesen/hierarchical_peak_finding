@@ -277,17 +277,26 @@ class PeakTree:
         """Yield nodes on the input node's paternal line."""
         yield from self.path(self.full(node), self.mode(node), self.father)
 
-    def maxdeep(self, Dmax=3.0, localroot=None):
+    def maxdeep(self, Dmax=None, localroot=None):
         """Yield nodes in subtree according to a maximum depth."""
         # defaults:
+        if Dmax is None:
+            Dmax = 3.0
         if localroot is None:
             localroot = self.root()
+
+        def depth(x):
+            while self.is_nonroot(x) \
+              and self.elevation[x] == self.elevation[self.successor(x)]:
+                x = self.successor(x)
+            return self.depth(x)
+
         # maxdeep algorithm:
-        if self.depth(localroot) < Dmax:
+        if depth(localroot) < Dmax:
             yield localroot
         else:
             climber = self.mode(localroot)
-            while self.depth(self.successor(climber)) < Dmax:
+            while depth(self.successor(climber)) < Dmax:
                 climber = self.successor(climber)
             yield climber
             while climber != localroot:
