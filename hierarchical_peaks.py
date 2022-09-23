@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Python module for analysis of peaks in numeric data.
+"""Python module for finding peaks in numeric data.
 
-This module contains algorithms for building a binary tree
-representing the hierarchical structure of peaks in data.
+This module contains algorithms for building binary trees
+representing the hierarchical structure of peaks and subpeaks
+in one-dimensional or higher-dimensional data.
 It also contains methods for searching the tree and selecting peaks.
 
 Created on Wed Mar 24 14:49:04 2021.
@@ -21,8 +22,8 @@ from itertools import chain
 
 def _forward_backward(iterable):
     """Return pair of iterators: (forward, backward)."""
-    mylist = list(iterable)
-    return iter(mylist), reversed(mylist)
+    data = list(iterable)
+    return iter(data), reversed(data)
 
 
 def _pairwise(iterable):
@@ -62,7 +63,7 @@ def filter_local_extrema(datapoints):
 
 
 def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
-    """Return dict of (start, end)-locations for the input peaks."""
+    """Return dict of (start, end)-locations for the input points."""
     # defaults:
     if revpeaks is None:
         peakpoints, revpeaks = _forward_backward(peakpoints)
@@ -97,22 +98,22 @@ def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
 
 
 class PeakTree:
-    """Binary tree of hierarchical peaks in data.
+    """Binary tree of peaks in univariate data.
 
     A PeakTree represents the hierarchical structure of
-    all peaks in a univariate data set (such as a time series,
-    a numeric sequence or a function x -> h).
+    peaks and subpeaks in data such as a sequence of numbers,
+    a time series, a function y(x) or other univariate data.
 
-    A PeakTree is initialized with an iterable of (x,h)-tuples,
+    A PeakTree is initialized with an iterable of (label, value)-tuples,
     representing the local extrema in the data set
-    (the alternating maximum and minimum points).
+    (i.e. the alternating maximum and minimum points).
 
-    The h-values must be numeric (elevation values).
-    The x-values must be unique hashable objects for use as keys.
+    The values must be numeric and the labels must be
+    unique hashable objects for use as dictionary keys.
 
     Notes
     -----
-    Recommended literature for the PeakTree class is
+    Background literature for the PeakTree class is
     the subsection titled "1D peaks" in the article [1]_.
 
     References
@@ -123,37 +124,37 @@ class PeakTree:
        Open access: https://doi.org/10.1186/1748-7188-3-10
     """
 
-    def __init__(self, maxima_and_minima):
+    def __init__(self, data):
         """Build a PeakTree and compute its data attributes."""
-        self.elevation = dict(maxima_and_minima)
+        self.data = dict(data)
         # requires preserved insertion order:
-        nodes = list(self.elevation)
+        nodes = list(self.data)
         # remove possible minimum at the beginning:
-        if self.elevation[nodes[0]] < self.elevation[nodes[1]]:
-            del self.elevation[nodes[0]]
+        if self.data[nodes[0]] < self.data[nodes[1]]:
+            del self.data[nodes[0]]
             del nodes[0]
         # remove possible minimum at the end:
-        if self.elevation[nodes[-1]] < self.elevation[nodes[-2]]:
-            del self.elevation[nodes[-1]]
+        if self.data[nodes[-1]] < self.data[nodes[-2]]:
+            del self.data[nodes[-1]]
             del nodes[-1]
         # compute data attributes:
-        self._find_successor_and_root()
-        self._find_mode_father_mother()
+        self._find_parent_and_root()
+        self._find_mode_high_low()
         self._find_full()
 
-    def __contains__(self, peak):
+    def __contains__(self, node):
         """Return True if the input is a node in the PeakTree."""
-        return peak in self.elevation
+        return node in self.data
 
     def __iter__(self):
         """Iterate over nodes in the PeakTree."""
-        return iter(self.elevation)
+        return iter(self.data)
 
     def __len__(self):
         """Return number of nodes in the PeakTree."""
-        return len(self.elevation)
+        return len(self.data)
 
-    def __mul__(self, other):
+    def __matmul__(self, other):
         """Return product with other tree (PeakTree or FrameTree)."""
         return FrameTree(self, other)
 
@@ -163,72 +164,87 @@ class PeakTree:
 
     def as_string(self, localroot):
         """Return printable subtree structure."""
-        str = "# Notation: <father> /& <mother>/ => <successor>\n"
+        str = "# Notation: <high> /& <low>/ => <parent>\n"
         for full in chain([localroot],
-                          self.foremothers(localroot)
+                          self.low_descendants(localroot)
                           ):
-            if not self.has_parents(full):
+            if not self.has_children(full):
                 continue
             for node in self.path(self.mode(full),
-                                  self.father(full),
-                                  self.successor
+                                  self.high(full),
+                                  self.parent
                                   ):
-                str += f'{node} /& {self.mother(self.successor(node))}/ => '
+                str += f'{node} /& {self.low(self.parent(node))}/ => '
             str += f'{full}\n'
         return str
 
+    def as_dict_of_dicts(self):
+        """Return data attributes as a dict of dicts."""
+        return {
+            "elevation": self.data,
+            "parent": self._parent,
+            "high": self._high,
+            "low": self._low,
+            "mode": self._mode,
+            "full": self._full,
+        }
+
     def maxima(self):
         """Return ordered list of leaf nodes (local maxima)."""
-        return list(self.elevation)[0::2]
+        return list(self.data)[0::2]
 
     def minima(self):
         """Return ordered list of branch nodes (local minima)."""
-        return list(self.elevation)[1::2]
+        return list(self.data)[1::2]
 
     def root(self):
         """Return the root node of the PeakTree."""
         return self._root
 
-    def is_nonroot(self, peak):
-        """Return True if the input peak has a successor."""
-        return peak != self._root
+    def is_nonroot(self, node):
+        """Return True if the input peak has a parent."""
+        return node != self._root
 
-    def mode(self, peak):
-        """Return the input peak's top (a leaf node)."""
-        return self._mode[peak]
+    def mode(self, node):
+        """Return the input peak's top (highest leaf node)."""
+        return self._mode[node]
 
-    def has_parents(self, peak):
-        """Return True if the input peak has a father and mother."""
-        return peak != self._mode[peak]
+    def has_children(self, node):
+        """Return True if the input peak has subpeaks."""
+        return node != self._mode[node]
 
-    def height(self, peak):
-        """Return the input peak's top elevation."""
-        return self.elevation[self.mode(peak)]
+    def height(self, node):
+        """Return the height at the mode of the input peak."""
+        return self.data[self.mode(node)]
 
-    def depth(self, peak):
-        """Return the input peak's depth."""
-        return self.height(peak) - self.elevation[peak]
+    def base_height(self, node):
+        """Return the height at the base of the input peak."""
+        return self.data[node]
 
-    def successor(self, peak):
+    def size(self, node):
+        """Return vertical distance between mode and base."""
+        return self.height(node) - self.base_height(node)
+
+    def parent(self, node):
         """Return the input peak merged with its neighboring peak."""
-        return self._successor[peak]
+        return self._parent[node]
 
-    def father(self, peak):
+    def high(self, node):
         """Return the highest of the input peak's two subpeaks."""
-        return self._father[peak]
+        return self._high[node]
 
-    def mother(self, peak):
+    def low(self, node):
         """Return the lowest of the input peak's two subpeaks."""
-        return self._mother[peak]
+        return self._low[node]
 
-    def full(self, peak):
-        """Return the deepest peak with same mode as the input peak."""
-        return self._full[self.mode(peak)]
+    def full(self, node):
+        """Return the largest peak with same mode as the input peak."""
+        return self._full[self.mode(node)]
 
-    def index(self, peak):
-        """Return the index of the input peak."""
+    def index(self, node):
+        """Return the zero-based index of the input peak."""
         # accessing the preserved insertion order:
-        return list(self.elevation).index(peak)
+        return list(self.data).index(node)
 
     # public recursive algorithms:
 
@@ -240,121 +256,119 @@ class PeakTree:
             climber = step(climber)
             yield climber
 
-    def successors(self, node):
+    def root_path(self, node):
         """Yield nodes on the path from the input node to the root."""
-        yield from self.path(node, self.root(), self.successor)
+        yield from self.path(node, self.root(), self.parent)
 
-    def ancestors(self, localroot=None):
+    def subtree(self, localroot=None):
         """Yield all nodes in the input node's subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
         yield localroot
-        yield from self.forefathers(localroot)
-        yield from self.foremothers(localroot)
+        yield from self.high_descendants(localroot)
+        yield from self.low_descendants(localroot)
 
-    def forefathers(self, localroot=None):
-        """Yield fathers in the input node's subtree."""
+    def high_descendants(self, localroot=None):
+        """Yield high children in the input node's subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
-        if self.has_parents(localroot):
-            yield self.father(localroot)
-            yield from self.forefathers(self.father(localroot))
-            yield from self.forefathers(self.mother(localroot))
+        if self.has_children(localroot):
+            yield self.high(localroot)
+            yield from self.high_descendants(self.high(localroot))
+            yield from self.high_descendants(self.low(localroot))
 
-    def foremothers(self, localroot=None):
-        """Yield mothers in the input node's subtree."""
+    def low_descendants(self, localroot=None):
+        """Yield low children in the input node's subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
-        if self.has_parents(localroot):
-            yield self.mother(localroot)
-            yield from self.foremothers(self.mother(localroot))
-            yield from self.foremothers(self.father(localroot))
+        if self.has_children(localroot):
+            yield self.low(localroot)
+            yield from self.low_descendants(self.low(localroot))
+            yield from self.low_descendants(self.high(localroot))
 
-    def paternal_line(self, node):
-        """Yield nodes on the input node's paternal line."""
-        yield from self.path(self.full(node), self.mode(node), self.father)
+    def full_to_mode_path(self, node):
+        """Yield path nodes from full to mode."""
+        yield from self.path(self.full(node), self.mode(node), self.high)
 
-    def maxdeep(self, Dmax=None, localroot=None):
-        """Yield nodes in subtree according to a maximum depth."""
+    def filter(self, *, maxsize, localroot=None):
+        """Yield subtree nodes filtered by size."""
         # defaults:
-        if Dmax is None:
-            Dmax = 3.0
         if localroot is None:
             localroot = self.root()
 
-        def depth(x):
+        def height_above_base(x):
             while self.is_nonroot(x) \
-              and self.elevation[x] == self.elevation[self.successor(x)]:
-                x = self.successor(x)
-            return self.depth(x)
+                    and self.data[x] == self.data[self.parent(x)]:
+                x = self.parent(x)
+            return self.size(x)
 
-        # maxdeep algorithm:
-        if depth(localroot) < Dmax:
+        # The 'maxdeep' algorithm:
+        if height_above_base(localroot) < maxsize:
             yield localroot
         else:
             climber = self.mode(localroot)
-            while depth(self.successor(climber)) < Dmax:
-                climber = self.successor(climber)
+            while height_above_base(self.parent(climber)) < maxsize:
+                climber = self.parent(climber)
             yield climber
             while climber != localroot:
-                climber = self.successor(climber)
-                yield from self.maxdeep(Dmax, self.mother(climber))
+                climber = self.parent(climber)
+                yield from self.filter(maxsize=maxsize, localroot=self.low(climber))
 
     # Initialization algorithms:
 
-    def _find_successor_and_root(self):
-        """Compute attributes: self._successor and self._root."""
-        self._successor = {}
-        parents_in_spe = []
-        parents = []
+    def _find_parent_and_root(self):
+        """Compute attributes: self._parent and self._root."""
+        self._parent = {}
+        children_in_spe = []
+        children = []
         for peak in self:
-            while parents_in_spe:
-                if self.elevation[parents_in_spe[-1]] < self.elevation[peak]:
+            while children_in_spe:
+                if self.data[children_in_spe[-1]] < self.data[peak]:
                     break
                 else:
-                    parents.append(parents_in_spe.pop())
-            if parents:
-                parent = parents.pop()
-                self._successor[parent] = peak
-                while parents:
-                    grandparent = parents.pop()
-                    self._successor[grandparent] = parent
-                    parent = grandparent
-            parents_in_spe.append(peak)
-        parent = parents_in_spe.pop()
-        while parents_in_spe:
-            child = parents_in_spe.pop()
-            self._successor[parent] = child
-            parent = child
-        self._root = child
+                    children.append(children_in_spe.pop())
+            if children:
+                child = children.pop()
+                self._parent[child] = peak
+                while children:
+                    grandchild = children.pop()
+                    self._parent[grandchild] = child
+                    child = grandchild
+            children_in_spe.append(peak)
+        child = children_in_spe.pop()
+        while children_in_spe:
+            parent = children_in_spe.pop()
+            self._parent[child] = parent
+            child = parent
+        self._root = parent
 
-    def _find_mode_father_mother(self):
-        """Compute attributes: self._mode, self._father and self._mother."""
-        self._father = {}
-        self._mother = {}
+    def _find_mode_high_low(self):
+        """Compute attributes: self._mode, self._high and self._low."""
+        self._high = {}
+        self._low = {}
 
         def propagate_mode(peak):
-            successor = self.successor(peak)
-            if successor not in self._father:
-                self._father[successor] = peak
+            parent = self.parent(peak)
+            if parent not in self._high:
+                self._high[parent] = peak
             else:
-                self._mother[successor] = peak
-                hf = self.height(self.father(successor))
-                hm = self.height(self.mother(successor))
+                self._low[parent] = peak
+                hf = self.height(self.high(parent))
+                hm = self.height(self.low(parent))
                 if hf < hm:
-                    self._mother[successor] = self._father[successor]
-                    self._father[successor] = peak
+                    self._low[parent] = self._high[parent]
+                    self._high[parent] = peak
                 elif hf == hm:
-                    # mother goes left, father goes right:
-                    if self.index(peak) > self.index(self.father(successor)):
-                        self._mother[successor] = self._father[successor]
-                        self._father[successor] = peak
-                self._mode[successor] = self.mode(self.father(successor))
-                if self.is_nonroot(successor):
-                    propagate_mode(successor)
+                    # low goes left, high goes right:
+                    if self.index(peak) > self.index(self.high(parent)):
+                        self._low[parent] = self._high[parent]
+                        self._high[parent] = peak
+                self._mode[parent] = self.mode(self.high(parent))
+                if self.is_nonroot(parent):
+                    propagate_mode(parent)
 
         self._mode = {peak: peak for peak in self.maxima()}
         for peak in self.maxima():
@@ -362,35 +376,26 @@ class PeakTree:
 
     def _find_full(self):
         """Compute attribute: self._full."""
-        self._full = {self.mode(peak): peak for peak in self._mother.values()}
+        self._full = {self.mode(peak): peak for peak in self._low.values()}
         self._full[self.mode(self._root)] = self._root
 
 
 class FrameTree(PeakTree):
-    """Binary tree of higher-dimensional hierarchical peaks.
+    """Binary tree of higher-dimensional peaks.
 
-    A FrameTree represents the hierarchical structure of
-    peaks in more dimensions (such as a "mountain" landscape
-    with height z as a function of x and y). It is based on
-    an assumption of decoupling: The height function z(x,y)
-    is a sum f(x) + g(y) or a product f(x) * g(y).
+    A FrameTree represents the hierarchical structure of peaks
+    and subpeaks in more dimensions, like a "mountain" landscape
+    with height z as a function of x and y. It assumes dimensional
+    decoupling, i.e. the height is a sum z(x,y) = f(x) + g(y)
+    or a product z(x,y) = f(x) * g(y).
 
     A Frametree is constructed as a pair of lower-dimensional
     trees (of type PeakTree or Frametree). It is a kind of
     product tree, but it is not the Cartesian product.
 
-    Subclass
-    --------
-    From PeakTree, the FrameTree class
-    - overrides: __init__, __contains__, __iter__, 'is_nonroot',
-      'mode', 'mother', 'root', 'successor',
-    - copies: __str__, as_string, __mul__,
-    - removes (NotImplemented): height, '_find_full',
-      '_find_mode_father_mother', '_find_successor_and_root',
-
     Notes
     -----
-    Recommended literature for the FrameTree class is
+    Background literature for the FrameTree class is
     the subsection titled "2D peaks" in the article [1]_.
 
     References
@@ -401,115 +406,117 @@ class FrameTree(PeakTree):
        Open access: https://doi.org/10.1186/1748-7188-3-10
     """
 
-    def __init__(self, x_tree, y_tree):
-        self.x = x_tree
-        self.y = y_tree
+    def __init__(self, left_tree, right_tree):
+        self.L = left_tree
+        self.R = right_tree
 
     def __contains__(self, frame):
         """Return True if the input is a node in the FrameTree."""
         a, b = frame
-        # test if frame is sigma-above:
+        # test if frame is 'sigma-above':
         return (
-                (a == self.x.root()
-                 or
-                 self.x.depth(self.x.successor(a)) > self.y.depth(b)
-                 )
-                and
-                (b == self.y.root()
-                 or
-                 self.y.depth(self.y.successor(b)) > self.x.depth(a)
-                 )
-                )
+            (a == self.L.root()
+             or
+             self.L.size(self.L.parent(a)) > self.R.size(b)
+             )
+            and
+            (b == self.R.root()
+             or
+             self.R.size(self.R.parent(b)) > self.L.size(a)
+             )
+        )
 
     def __iter__(self):
         """Iterate over nodes in the FrameTree."""
-        yield from self.ancestors()
+        yield from self.subtree()
 
     def __len__(self):
         """Return number of nodes in the FrameTree."""
-        return len(list(self.ancestors()))
+        return len(list(self.subtree()))
 
     def maxima(self):
         """Yield leaf nodes (local maxima)."""
-        for a in self.x.maxima():
-            for b in self.y.maxima():
+        for a in self.L.maxima():
+            for b in self.R.maxima():
                 yield a, b
 
     def minima(self):
         """Yield local minima."""
-        for a in self.x.minima():
-            for b in self.y.minima():
+        for a in self.L.minima():
+            for b in self.R.minima():
                 yield a, b
 
     def root(self):
         """Return the root node of the FrameTree."""
-        return (self.x.root(), self.y.root())
+        return (self.L.root(), self.R.root())
 
     def is_nonroot(self, frame):
-        """Return True if the input frame has a successor."""
+        """Return True if the input frame has a parent."""
         a, b = frame
-        return self.x.is_nonroot(a) or self.y.is_nonroot(b)
+        return self.L.is_nonroot(a) or self.R.is_nonroot(b)
 
     def mode(self, frame):
         """Return the input frame's top (a leaf node)."""
         a, b = frame
-        return (self.x.mode(a), self.y.mode(b))
+        return (self.L.mode(a), self.R.mode(b))
 
-    def has_parents(self, frame):
-        """Return True if the input frame has a father and mother."""
+    def has_children(self, frame):
+        """Return True if the input frame has subframes."""
         a, b = frame
-        return self.x.has_parents(a) or self.y.has_parents(b)
+        return self.L.has_children(a) or self.R.has_children(b)
 
     def height(self, frame):
         """Return that height is NotImplemented."""
-        # todo ? sum of heights
         return NotImplemented
 
-    def depth(self, frame):
-        """Return the input frame's depth."""
-        a, b = frame
-        d1, d2 = self.x.depth(a), self.y.depth(b)
-        return d1 if d1 > d2 else d2
+    def base_height(self, frame):
+        """Return that base_height is NotImplemented."""
+        return NotImplemented
 
-    def successor(self, frame):
+    def size(self, frame):
+        """Return the input frame's size."""
+        a, b = frame
+        return max(self.L.size(a), self.R.size(b))
+
+    def parent(self, frame):
         """Return the input frame merged with its neighboring frame."""
         a, b = frame
-        if self.x.is_nonroot(a) and self.y.is_nonroot(b):
-            sa, sb = self.x.successor(a), self.y.successor(b)
-            if self.x.depth(sa) > self.y.depth(sb):
-                return (a, sb)
+        if self.L.is_nonroot(a) and self.R.is_nonroot(b):
+            pa, pb = self.L.parent(a), self.R.parent(b)
+            if self.L.size(pa) > self.R.size(pb):
+                return (a, pb)
             else:
-                return (sa, b)
-        elif not self.x.is_nonroot(a) and not self.y.is_nonroot(b):
+                return (pa, b)
+        elif not self.L.is_nonroot(a) and not self.R.is_nonroot(b):
             return None
-        elif self.x.is_nonroot(a):
+        elif self.L.is_nonroot(a):
             # then b is root
-            return (self.x.successor(a), b)
+            return (self.L.parent(a), b)
         else:
             # then a is root and b nonroot
-            return (a, self.y.successor(b))
+            return (a, self.R.parent(b))
 
-    def father(self, frame):
-        """Return the input frame's father subframe."""
+    def high(self, frame):
+        """Return the input frame's high subframe."""
         a, b = frame
-        if self.x.depth(a) > self.y.depth(b):
-            return (self.x.father(a), b)
+        if self.L.size(a) > self.R.size(b):
+            return (self.L.high(a), b)
         else:
-            return (a, self.y.father(b))
+            return (a, self.R.high(b))
 
-    def mother(self, frame):
-        """Return the input frame's mother subframe."""
+    def low(self, frame):
+        """Return the input frame's low subframe."""
         a, b = frame
-        if self.x.depth(a) > self.y.depth(b):
-            return (self.x.mother(a), b)
+        if self.L.size(a) > self.R.size(b):
+            return (self.L.low(a), b)
         else:
-            return (a, self.y.mother(b))
+            return (a, self.R.low(b))
 
     def full(self, frame):
         """Return the largest frame with same mode as the input frame."""
         climber = frame
         while self.is_nonroot(climber):
-            nextstep = self.successor(climber)
+            nextstep = self.parent(climber)
             if self.mode(nextstep) == self.mode(climber):
                 climber = nextstep
             else:
@@ -519,26 +526,26 @@ class FrameTree(PeakTree):
     def index(self, frame):
         """Return a tuple of (nested) indices for the input frame."""
         a, b = frame
-        return self.x.index(a), self.y.index(b)
+        return self.L.index(a), self.R.index(b)
 
-    def maxdeep(self, Dmax=3.0, localroot=None):
+    def filter(self, *, maxsize, localroot=None):
         """Yield grid frames contained in the input frame."""
         # defaults:
         if localroot is None:
             localroot = self.root()
-        rx, ry = localroot
-        for a in self.x.maxdeep(Dmax, rx):
-            for b in self.y.maxdeep(Dmax, ry):
+        ra, rb = localroot
+        for a in self.L.filter(maxsize=maxsize, localroot=ra):
+            for b in self.R.filter(maxsize=maxsize, localroot=rb):
                 yield a, b
 
-    def _find_successor_and_root(self):
-        """Return that _find_successor_and_root is NotImplemented."""
+    def _find_parent_and_root(self):
+        """Return that it is NotImplemented."""
         return NotImplemented
 
-    def _find_mode_father_mother(self):
-        """Return that _find_mode_father_mother is NotImplemented."""
+    def _find_mode_high_low(self):
+        """Return that it is NotImplemented."""
         return NotImplemented
 
     def _find_full(self):
-        """Return that _find_full is NotImplemented."""
+        """Return that it is NotImplemented."""
         return NotImplemented
