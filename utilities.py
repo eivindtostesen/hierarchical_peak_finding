@@ -7,19 +7,6 @@ Created on Thu Dec  1 15:48:10 2022
 
 """
 
-import itertools
-
-
-# Functions:
-
-
-def slices(x, y, location):
-    """Return dict of tuples: xslice, yslice."""
-    return {
-        n: (x[x.index(x1): x.index(x2)+1], y[x.index(x1): x.index(x2)+1])
-        for n, (x1, x2) in location.items()
-    }
-
 
 # Classes:
 
