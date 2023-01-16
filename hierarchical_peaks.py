@@ -7,6 +7,8 @@ representing the hierarchical structure of peaks and subpeaks
 in one-dimensional or higher-dimensional data.
 It also contains methods for searching the tree and selecting peaks.
 
+Requires Python 3.7+
+
 Created on Wed Mar 24 14:49:04 2021.
 
 @author: Eivind Tostesen
@@ -106,6 +108,20 @@ def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
     return {x: (startdict[x], enddict[x]) for x in enddict}
 
 
+def slices(start, end, labels, values):
+    """Return tuple: label_slice, value_slice."""
+    i, j = labels.index(start), labels.index(end)
+    return labels[i: j+1], values[i: j+1]
+
+
+def flanks(start, end, labels, values):
+    """Return tuple: left_flank, right_flank."""
+    i, j = labels.index(start), labels.index(end)
+    left_flank = (labels[i-1], values[i-1]) if i > 0 else None
+    right_flank = (labels[j+1], values[j+1]) if j < len(labels)-1 else None
+    return left_flank, right_flank
+
+
 # Classes:
 
 
@@ -177,7 +193,7 @@ class PeakTree:
                     str += f' /& {self.low(self.parent(node))[0]}/'
                 if len(self.children(self.parent(node))) > 2:
                     str += f' /& {self.low(self.parent(node))}/'
-                str += f' => '
+                str += ' => '
             str += f'{full}.\n'
         return str
 
@@ -191,18 +207,6 @@ class PeakTree:
             "full": self._full,
             "root": self._root,
         }
-
-    def leaf_nodes(self):
-        """Return ordered list of leaf nodes (local maxima)."""
-        return [node for node in self if node not in self._parent.values()]
-
-    def branch_nodes(self):
-        """Return ordered list of nodes with two or more children."""
-        return [node for node in self if list(self._parent.values()).count(node) > 1]
-
-    def linear_nodes(self):
-        """Return ordered list of nodes with one child."""
-        return [node for node in self if list(self._parent.values()).count(node) == 1]
 
     def root(self):
         """Return the root node of the PeakTree."""
@@ -245,7 +249,7 @@ class PeakTree:
         return self.children(node)[0]
 
     def low(self, node):
-        """Return list of the input peak's lower subpeaks."""
+        """Return tuple of the input peak's lower subpeaks."""
         return self.children(node)[1:]
 
     def full(self, node):
@@ -309,8 +313,33 @@ class PeakTree:
         # defaults:
         if localroot is None:
             localroot = self.root()
-        yield localroot
+        if localroot == self.full(localroot):
+            yield localroot
         yield from self.low_descendants(localroot)
+
+    def leaf_nodes(self, localroot=None):
+        """Yield leaf nodes (local maxima) in (sub)tree."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        return (node for node in self.subtree(localroot)
+                if len(self.children(node)) == 0)
+
+    def branch_nodes(self, localroot=None):
+        """Yield nodes in (sub)tree with two or more children."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        return (node for node in self.subtree(localroot)
+                if len(self.children(node)) > 1)
+
+    def linear_nodes(self, localroot=None):
+        """Yield nodes in (sub)tree with one child."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        return (node for node in self.subtree(localroot)
+                if len(self.children(node)) == 1)
 
     def filter(self, *, maxsize, localroot=None):
         """Yield subtree nodes filtered by size."""
@@ -357,6 +386,7 @@ class PeakTree:
             for parent, child in _pairwise(in_spe):
                 self._parent[child] = parent
         self._root = in_spe[0]
+        self._parent[self._root] = None
         for label in non_nodes:
             del self.data[label]
 
@@ -375,17 +405,25 @@ class PeakTree:
                 children[parent].sort(key=self.index)
                 children[parent].sort(key=self.height, reverse=True)
                 self._children[parent] = tuple(children[parent])
-                self._mode[parent] = self.mode(self.high(parent))
+                self._mode[parent] = self._mode[self._children[parent][0]]
                 if self.is_nonroot(parent):
                     _propagate_mode(parent)
 
-        self._mode = {node: node for node in self.leaf_nodes()}
-        for node in self.leaf_nodes():
+        leafnodes = [n for n in self if n not in self._parent.values()]
+        self._mode = {node: node for node in leafnodes}
+        for node in leafnodes:
             _propagate_mode(node)
+        for node in leafnodes:
+            self._children[node] = ()
 
     def _find_full(self):
         """Compute attribute: self._full."""
-        self._full = {node: full for full in self.full_nodes()
+
+        def fullnodes():
+            yield self.root()
+            yield from self.low_descendants()
+
+        self._full = {node: full for full in fullnodes()
                       for node in self.mode_path(full)}
 
 
@@ -446,20 +484,6 @@ class FrameTree(PeakTree):
         """Return number of nodes in the FrameTree."""
         return len(list(self.__iter__()))
 
-    def leaf_nodes(self):
-        """Yield leaf nodes."""
-        for a in self.L.leaf_nodes():
-            for b in self.R.leaf_nodes():
-                yield a, b
-
-    def branch_nodes(self):
-        """Return list of branch nodes."""
-        return [node for node in self if self.has_children(node) and len(self.children(node)) > 1]
-
-    def linear_nodes(self):
-        """Return list of linear nodes."""
-        return [node for node in self if self.has_children(node) and len(self.children(node)) == 1]
-
     def root(self):
         """Return the root node of the FrameTree."""
         return (self.L.root(), self.R.root())
@@ -516,6 +540,16 @@ class FrameTree(PeakTree):
                          for cb in self.R.children(b)
                          )
 
+    def high(self, frame):
+        """Return the child (subframe) that has the same mode."""
+        a, b = frame
+        if self.L.size(a) > self.R.size(b):
+            return (self.L.high(a), b)
+        elif self.L.size(a) < self.R.size(b):
+            return (a, self.R.high(b))
+        elif self.L.size(a) == self.R.size(b):
+            return (self.L.high(a), self.R.high(b))
+
     def full(self, frame):
         """Return the largest frame with same mode as the input frame."""
         climber = frame
@@ -531,6 +565,12 @@ class FrameTree(PeakTree):
         """Return a tuple of (nested) indices for the input frame."""
         a, b = frame
         return self.L.index(a), self.R.index(b)
+
+    def leaf_nodes(self):
+        """Yield leaf nodes (local maxima) in (sub)tree."""
+        for a in self.L.leaf_nodes():
+            for b in self.R.leaf_nodes():
+                yield a, b
 
     def filter(self, *, maxsize, localroot=None):
         """Yield grid frames contained in the input frame."""
