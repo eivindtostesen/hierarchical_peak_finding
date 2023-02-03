@@ -155,7 +155,7 @@ class PeakTree:
         self.data = dict(data)
         # compute data attributes:
         self._find_parent_and_root()
-        self._find_mode_and_children()
+        self._find_top_and_children()
         self._find_full()
 
     def __contains__(self, node):
@@ -184,7 +184,7 @@ class PeakTree:
         for full in self.full_nodes(localroot):
             if not self.has_children(full):
                 continue
-            for node in self.path(self.mode(full),
+            for node in self.path(self.top(full),
                                   self.high(full),
                                   self.parent
                                   ):
@@ -203,7 +203,7 @@ class PeakTree:
             "data": self.data,
             "parent": self._parent,
             "children": self._children,
-            "mode": self._mode,
+            "mode": self._top,
             "full": self._full,
             "root": self._root,
         }
@@ -216,24 +216,24 @@ class PeakTree:
         """Return True if the input node has a parent."""
         return node != self._root
 
-    def mode(self, node):
-        """Return the input node's mode (highest leaf node)."""
-        return self._mode[node]
+    def top(self, node):
+        """Return the highest leaf node in the node's subtree."""
+        return self._top[node]
 
     def has_children(self, node):
         """Return True if the input node has subpeaks."""
-        return node != self._mode[node]
+        return node != self._top[node]
 
     def height(self, node):
-        """Return the height at the mode of the input peak."""
-        return self.data[self.mode(node)]
+        """Return the height at the top of the input peak."""
+        return self.data[self.top(node)]
 
     def base_height(self, node):
         """Return the height at the base of the input peak."""
         return self.data[node]
 
     def size(self, node):
-        """Return vertical distance between mode and base."""
+        """Return vertical distance between top and base."""
         return self.height(node) - self.base_height(node)
 
     def parent(self, node):
@@ -253,7 +253,7 @@ class PeakTree:
         return self.children(node)[1:]
 
     def full(self, node):
-        """Return the largest peak with same mode as the input peak."""
+        """Return the largest peak with same top as the input peak."""
         return self._full[node]
 
     def index(self, node):
@@ -272,12 +272,12 @@ class PeakTree:
             yield climber
 
     def root_path(self, node):
-        """Yield nodes on the path from the input node to the root."""
+        """Yield nodes on path from a node to its root."""
         yield from self.path(node, self.root(), self.parent)
 
-    def mode_path(self, node):
-        """Yield path nodes from a node to its mode."""
-        yield from self.path(node, self.mode(node), self.high)
+    def top_path(self, node):
+        """Yield nodes on path from a node to its top."""
+        yield from self.path(node, self.top(node), self.high)
 
     def subtree(self, localroot=None):
         """Yield all nodes in the input node's subtree."""
@@ -350,7 +350,7 @@ class PeakTree:
         if self.size(localroot) < maxsize:
             yield localroot
         else:
-            climber = self.mode(localroot)
+            climber = self.top(localroot)
             while self.size(self.parent(climber)) < maxsize:
                 climber = self.parent(climber)
             yield climber
@@ -390,29 +390,29 @@ class PeakTree:
         for label in non_nodes:
             del self.data[label]
 
-    def _find_mode_and_children(self):
-        """Compute attributes: self._mode and self._children."""
+    def _find_top_and_children(self):
+        """Compute attributes: self._top and self._children."""
         self._children = {}
         children = {p: [] for p in self._parent.values()}
         for c, p in self._parent.items():
             children[p].append(c)
         countdown = {p: len(children[p]) for p in self._parent.values()}
 
-        def _propagate_mode(node):
+        def _propagate_top(node):
             parent = self.parent(node)
             countdown[parent] -= 1
             if countdown[parent] == 0:
                 children[parent].sort(key=self.index)
                 children[parent].sort(key=self.height, reverse=True)
                 self._children[parent] = tuple(children[parent])
-                self._mode[parent] = self._mode[self._children[parent][0]]
+                self._top[parent] = self._top[self._children[parent][0]]
                 if self.is_nonroot(parent):
-                    _propagate_mode(parent)
+                    _propagate_top(parent)
 
         leafnodes = [n for n in self if n not in self._parent.values()]
-        self._mode = {node: node for node in leafnodes}
+        self._top = {node: node for node in leafnodes}
         for node in leafnodes:
-            _propagate_mode(node)
+            _propagate_top(node)
         for node in leafnodes:
             self._children[node] = ()
 
@@ -424,7 +424,7 @@ class PeakTree:
             yield from self.low_descendants()
 
         self._full = {node: full for full in fullnodes()
-                      for node in self.mode_path(full)}
+                      for node in self.top_path(full)}
 
 
 class FrameTree(PeakTree):
@@ -493,10 +493,10 @@ class FrameTree(PeakTree):
         a, b = frame
         return self.L.is_nonroot(a) or self.R.is_nonroot(b)
 
-    def mode(self, frame):
+    def top(self, frame):
         """Return the input frame's top (a leaf node)."""
         a, b = frame
-        return (self.L.mode(a), self.R.mode(b))
+        return (self.L.top(a), self.R.top(b))
 
     def has_children(self, frame):
         """Return True if the input frame has subframes."""
@@ -541,7 +541,7 @@ class FrameTree(PeakTree):
                          )
 
     def high(self, frame):
-        """Return the child (subframe) that has the same mode."""
+        """Return the child (subframe) that has the same top."""
         a, b = frame
         if self.L.size(a) > self.R.size(b):
             return (self.L.high(a), b)
@@ -551,11 +551,11 @@ class FrameTree(PeakTree):
             return (self.L.high(a), self.R.high(b))
 
     def full(self, frame):
-        """Return the largest frame with same mode as the input frame."""
+        """Return the largest frame with same top as the input frame."""
         climber = frame
         while self.is_nonroot(climber):
             nextstep = self.parent(climber)
-            if self.mode(nextstep) == self.mode(climber):
+            if self.top(nextstep) == self.top(climber):
                 climber = nextstep
             else:
                 break
@@ -598,7 +598,7 @@ class FrameTree(PeakTree):
         """Return that it is NotImplemented."""
         return NotImplemented
 
-    def _find_mode_and_children(self):
+    def _find_top_and_children(self):
         """Return that it is NotImplemented."""
         return NotImplemented
 
