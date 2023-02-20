@@ -1,13 +1,14 @@
 # Hierarchical Peak Finding
 
-The file [hierarchical_peaks.py](hierarchical_peaks.py) is a Python module for detecting peaks in numeric data. It constructs trees to represent the structure of data sets, corresponding to larger peaks containing smaller subpeaks.
+The file [hierarchical_peaks.py](hierarchical_peaks.py) is the core Python module for detecting peaks in numeric data. It constructs tree objects to represent how peaks in data are grouped and how larger peaks contain smaller subpeaks.
 
-Requires Python 3.7+
+Requires Python 3.8+
 
 ![peak plot](output.png)
 
 ## Howto files
 For documentation of the usage of `hierarchical_peaks`, jupyter notebooks are (or will be) included:
+* [How_to_plot_with_matplotlib.ipynb](How_to_plot_with_matplotlib.ipynb)
 * [How_to_initialize.ipynb](How_to_initialize.ipynb)
 * [How_to_plot_tree.ipynb](How_to_plot_tree.ipynb)
 * [How_to_find_peaks.ipynb](How_to_find_peaks.ipynb)
