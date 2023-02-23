@@ -45,14 +45,14 @@ def add_L_arrow(axes, tail_x, tail_y, head_x, head_y, *,
     )
 
 
-def add_bounding_box(ax, x1, x2, base_height, size, *,
+def add_bounding_box(ax, x1, x2, y1, y2, *,
                      edgecolor="C2", fill=False, linewidth=3, **kwargs):
     """Plot bounding box around a peak."""
     ax.add_patch(
         matplotlib.patches.Rectangle(
-            xy=(x1, base_height),
+            xy=(x1, y1),
             width=x2 - x1,
-            height=size,
+            height=y2 - y1,
             fill=fill,
             linewidth=linewidth,
             edgecolor=edgecolor,
@@ -61,15 +61,15 @@ def add_bounding_box(ax, x1, x2, base_height, size, *,
     )
 
 
-def add_pedestal(ax, x1, x2, base_height, *,
-                 fill=True, linewidth=1, edgecolor="C2",
+def add_pedestal(ax, x1, x2, y2, *,
+                 y1=0, fill=True, linewidth=1, edgecolor="C2",
                  facecolor="gold", alpha=0.6, **kwargs):
     """Plot a pedestal (below a bounding box)."""
     ax.add_patch(
         matplotlib.patches.Rectangle(
-            xy=(x1, 0),
+            xy=(x1, y1),
             width=x2 - x1,
-            height=base_height,
+            height=y2 - y1,
             fill=fill,
             linewidth=linewidth,
             edgecolor=edgecolor,
@@ -80,23 +80,23 @@ def add_pedestal(ax, x1, x2, base_height, *,
     )
 
 
-def add_crown(ax, xslice, yslice, base_height, *,
+def add_crown(ax, xslice, yslice, y1, *,
               facecolor='gold', alpha=0.9, **kwargs):
     """Color the area under a peak."""
     ax.fill_between(
-        xslice, yslice, base_height,
+        xslice, yslice, y1,
         facecolor=facecolor,
         alpha=alpha,
         **kwargs,
     )
 
 
-def add_bar(axes, x1, x2, y, *,
+def add_bar(axes, x1, x2, y1, *,
             height=0.5, color="C3", fill=True, **kwargs):
     """Plot a bar to indicate peak location."""
     axes.add_patch(
         matplotlib.patches.Rectangle(
-            xy=(x1, y),
+            xy=(x1, y1),
             width=x2 - x1,
             height=height,
             color=color,
@@ -114,32 +114,27 @@ class PeakTreePlotter(ChainedAttributes):
 
     def __init__(self, tree, attrname='plot',
                  ax=None, fig=None,
-                 xy={}, location={}, base_height={}, size={}, slices={},
+                 xy={}, xinterval={}, yinterval={}, slices={},
                  ):
         """Attach a plotting object to a PeakTree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
-        self.ax = None
-        self.fig = None
-        self.xy = {n: (self.rootself.mode(n), self.rootself.base_height(n))
-                   for n in self.rootself}
-        self.base_height = {n: self.rootself.base_height(n)
-                            for n in self.rootself}
-        self.size = {n: self.rootself.size(n) for n in self.rootself}
-        if ax:
-            self.ax = ax
-        if fig:
-            self.fig = fig
-        if xy:
-            self.xy = xy
-        if location:
-            self.location = location
-        if base_height:
-            self.base_height = base_height
-        if size:
-            self.size = size
-        if slices:
-            self.slices = slices
+        self.ax = ax
+        self.fig = fig
+        self.xy = xy
+        self.xinterval = xinterval
+        self.yinterval = yinterval
+        self.slices = slices
+        if not xy:
+            self.xy = {n: (self.rootself.mode(n),
+                           self.rootself.base_height(n))
+                       for n in self.rootself
+                       }
+        if not yinterval:
+            self.yinterval = {n: (self.rootself.base_height(n),
+                                  self.rootself.height(n))
+                              for n in self.rootself
+                              }
         plt.style.use('seaborn')
 
     def new(self):
@@ -178,9 +173,8 @@ class PeakTreePlotter(ChainedAttributes):
         for n in nodes:
             add_bounding_box(
                 self.ax,
-                *self.location[n],
-                self.base_height[n],
-                self.size[n],
+                *self.xinterval[n],
+                *self.yinterval[n],
                 **kwargs,
             )
         return self
@@ -195,24 +189,29 @@ class PeakTreePlotter(ChainedAttributes):
             add_crown(
                 self.ax,
                 *self.slices[n],
-                self.base_height[n],
+                self.yinterval[n][0],
                 **kwargs,
             )
 
-    def bars(self, nodes=None, **kwargs):
-        """Plot bars that indicate peak sizes and locations."""
+    def pyramids(self, nodes=None, **kwargs):
+        """Plot pyramids of stacked locations of peaks."""
         if nodes is None:
             nodes = self.rootself
-        # height = [height]
         if self.ax is None:
             self.new()
-            self.ax.set_ylabel('Size')
-            self.ax.set_ylim([0, self.rootself.size(self.rootself.root())])
+            self.ax.set_ylabel('Level')
+            self.ax.set_ylim(
+                [0,
+                len(list(self.rootself.mode_path(
+                    self.rootself.root())))
+                ]
+            )
         for n in nodes:
             add_bar(
                 self.ax,
-                *self.location[n],
-                self.size[n],
+                *self.xinterval[n],
+                len(list(self.rootself.root_path(n))) - 1,
+                height=0.9,
                 **kwargs,
             )
         return self
