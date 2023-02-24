@@ -121,7 +121,7 @@ class PeakTreePlotter(ChainedAttributes):
         self.setattr(obj=tree, attrname=attrname)
         self.ax = None
         self.fig = None
-        self.xy = {n: (self.rootself.mode(n), self.rootself.base_height(n))
+        self.xy = {n: (self.rootself.top(n), self.rootself.base_height(n))
                    for n in self.rootself}
         self.base_height = {n: self.rootself.base_height(n)
                             for n in self.rootself}
@@ -147,8 +147,8 @@ class PeakTreePlotter(ChainedAttributes):
         self.fig = plt.figure(figsize=(10.0, 4.0))
         self.ax = self.fig.add_axes([.1, .1, 1, 1])
         self.ax.set_xlim([min(self.rootself), max(self.rootself)])
-        self.ax.set_ylim([min(self.rootself.data.values()),
-                          max(self.rootself.data.values())])
+        self.ax.set_ylim([min(self.rootself._data.values()),
+                          max(self.rootself._data.values())])
         self.ax.set_xlabel('Label')
         self.ax.set_ylabel('Value')
         return self

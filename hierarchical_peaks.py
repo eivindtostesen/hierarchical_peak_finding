@@ -152,7 +152,7 @@ class PeakTree:
 
     def __init__(self, data):
         """Build a PeakTree and compute its data attributes."""
-        self.data = dict(data)
+        self._data = dict(data)
         # compute data attributes:
         self._find_parent_and_root()
         self._find_top_and_children()
@@ -160,15 +160,15 @@ class PeakTree:
 
     def __contains__(self, node):
         """Return True if the input is a node in the PeakTree."""
-        return node in self.data
+        return node in self._data
 
     def __iter__(self):
         """Iterate over nodes in the PeakTree."""
-        return iter(self.data)
+        return iter(self._data)
 
     def __len__(self):
         """Return number of nodes in the PeakTree."""
-        return len(self.data)
+        return len(self._data)
 
     def __matmul__(self, other):
         """Return product with other tree (PeakTree or FrameTree)."""
@@ -200,10 +200,10 @@ class PeakTree:
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
         return {
-            "data": self.data,
+            "data": self._data,
             "parent": self._parent,
             "children": self._children,
-            "mode": self._top,
+            "top": self._top,
             "full": self._full,
             "root": self._root,
         }
@@ -226,11 +226,11 @@ class PeakTree:
 
     def height(self, node):
         """Return the height at the top of the input peak."""
-        return self.data[self.top(node)]
+        return self._data[self.top(node)]
 
     def base_height(self, node):
         """Return the height at the base of the input peak."""
-        return self.data[node]
+        return self._data[node]
 
     def size(self, node):
         """Return vertical distance between top and base."""
@@ -256,10 +256,10 @@ class PeakTree:
         """Return the largest peak with same top as the input peak."""
         return self._full[node]
 
-    def index(self, node):
+    def _index(self, node):
         """Return the zero-based index of the input node."""
         # accessing the preserved insertion order:
-        return list(self.data).index(node)
+        return list(self._data).index(node)
 
     # public recursive algorithms:
 
@@ -368,9 +368,9 @@ class PeakTree:
         non_nodes = []
         for label in self:
             path = []
-            while in_spe and self.data[in_spe[-1]] > self.data[label]:
+            while in_spe and self._data[in_spe[-1]] > self._data[label]:
                 path.append(in_spe.pop())
-            if in_spe and self.data[in_spe[-1]] == self.data[label]:
+            if in_spe and self._data[in_spe[-1]] == self._data[label]:
                 non_nodes.append(label)
                 if path:
                     path.append(in_spe[-1])
@@ -388,7 +388,7 @@ class PeakTree:
         self._root = in_spe[0]
         self._parent[self._root] = None
         for label in non_nodes:
-            del self.data[label]
+            del self._data[label]
 
     def _find_top_and_children(self):
         """Compute attributes: self._top and self._children."""
@@ -402,7 +402,7 @@ class PeakTree:
             parent = self.parent(node)
             countdown[parent] -= 1
             if countdown[parent] == 0:
-                children[parent].sort(key=self.index)
+                children[parent].sort(key=self._index)
                 children[parent].sort(key=self.height, reverse=True)
                 self._children[parent] = tuple(children[parent])
                 self._top[parent] = self._top[self._children[parent][0]]
@@ -561,10 +561,10 @@ class FrameTree(PeakTree):
                 break
         return climber
 
-    def index(self, frame):
+    def _index(self, frame):
         """Return a tuple of (nested) indices for the input frame."""
         a, b = frame
-        return self.L.index(a), self.R.index(b)
+        return self.L._index(a), self.R._index(b)
 
     def leaf_nodes(self):
         """Yield leaf nodes (local maxima) in (sub)tree."""
