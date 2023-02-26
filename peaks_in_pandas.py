@@ -57,14 +57,14 @@ class PeakTreeMethods(ChainedAttributes):
             .reset_index()
             .convert_dtypes()
             .sort_values(by="node",
-                         key=lambda col: col.map(self.rootself.index),
+                         key=lambda col: col.map(self.rootself._index),
                          )
-            )
+        )
 
     def dataframe(self,
                   nodes=None,
                   generate_columns=["node", "parent", "children", "high",
-                                    "low", "root", "full", "mode",
+                                    "low", "root", "full", "top",
                                     "is_nonroot", "has_children", "size",
                                     "height", "base_height", "node_index"],
                   **kwargs,
@@ -85,8 +85,8 @@ class PeakTreeMethods(ChainedAttributes):
             table["children"] = mapping(self.rootself.children)
         if "full" in generate_columns:
             table["full"] = mapping(self.rootself.full)
-        if "mode" in generate_columns:
-            table["mode"] = mapping(self.rootself.mode)
+        if "top" in generate_columns:
+            table["top"] = mapping(self.rootself.top)
         if "root" in generate_columns:
             table["root"] = self.rootself.root()
         if "high" in generate_columns:
@@ -107,23 +107,23 @@ class PeakTreeMethods(ChainedAttributes):
         if "has_children" in generate_columns:
             table["has_children"] = mapping(self.rootself.has_children)
         if "node_index" in generate_columns:
-            table["node_index"] = mapping(self.rootself.index)
+            table["node_index"] = mapping(self.rootself._index)
 
         return (
             pd.DataFrame({**table, **kwargs},
                          columns=generate_columns + list(kwargs.keys()),
                          )
             .convert_dtypes()
-            .sort_index(key=lambda col: col.map(self.rootself.index))
+            .sort_index(key=lambda col: col.map(self.rootself._index))
             .reset_index(drop=True)
-            )
+        )
 
     def tree_structure(self, nodes=None):
         """Return dataframe with hierarchical properties."""
         return self.dataframe(
             nodes,
             generate_columns=[
-                "mode",
+                "top",
                 "high",
                 "children",
                 "low",
@@ -134,8 +134,8 @@ class PeakTreeMethods(ChainedAttributes):
                 "is_nonroot",
                 "has_children",
                 "node_index",
-                ]
-            )
+            ]
+        )
 
     def peak_properties(self, nodes=None):
         """Return dataframe with peak properties."""
@@ -143,7 +143,7 @@ class PeakTreeMethods(ChainedAttributes):
             nodes = self.rootself
         return self.dataframe(
             nodes,
-            generate_columns=["node", "size", "height", "base_height", "mode"],
+            generate_columns=["node", "size", "height", "base_height", "top"],
             start={n: self.location[n][0]
                    for n in nodes
                    },
@@ -165,7 +165,7 @@ class PeakTreeMethods(ChainedAttributes):
             right_flank={n: self.flanks[n][1]
                          for n in nodes
                          },
-            )
+        )
 
     def graph_theoretical_properties(self, nodes=None):
         """Return dataframe with graph theoretical properties.
@@ -190,13 +190,13 @@ class PeakTreeMethods(ChainedAttributes):
             full_distance={n: len(list(full_path(self.rootself, n))) - 1
                            for n in nodes
                            },
-            mode_distance={n: len(list(self.rootself.mode_path(n))) - 1
-                           for n in nodes
-                           },
+            top_distance={n: len(list(self.rootself.top_path(n))) - 1
+                          for n in nodes
+                          },
             degree={n: len(self.rootself.children(n))
                     for n in nodes
                     },
             subtree_size={n: len(list(self.rootself.subtree(n)))
                           for n in nodes
                           },
-            )
+        )

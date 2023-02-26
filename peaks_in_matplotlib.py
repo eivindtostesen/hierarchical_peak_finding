@@ -126,7 +126,7 @@ class PeakTreePlotter(ChainedAttributes):
         self.yinterval = yinterval
         self.slices = slices
         if not xy:
-            self.xy = {n: (self.rootself.mode(n),
+            self.xy = {n: (self.rootself.top(n),
                            self.rootself.base_height(n))
                        for n in self.rootself
                        }
@@ -142,8 +142,8 @@ class PeakTreePlotter(ChainedAttributes):
         self.fig = plt.figure(figsize=(10.0, 4.0))
         self.ax = self.fig.add_axes([.1, .1, 1, 1])
         self.ax.set_xlim([min(self.rootself), max(self.rootself)])
-        self.ax.set_ylim([min(self.rootself.data.values()),
-                          max(self.rootself.data.values())])
+        self.ax.set_ylim([min(self.rootself._data.values()),
+                          max(self.rootself._data.values())])
         self.ax.set_xlabel('Label')
         self.ax.set_ylabel('Value')
         return self
@@ -202,9 +202,9 @@ class PeakTreePlotter(ChainedAttributes):
             self.ax.set_ylabel('Level')
             self.ax.set_ylim(
                 [0,
-                len(list(self.rootself.mode_path(
-                    self.rootself.root())))
-                ]
+                 len(list(self.rootself.top_path(
+                     self.rootself.root())))
+                 ]
             )
         for n in nodes:
             add_bar(

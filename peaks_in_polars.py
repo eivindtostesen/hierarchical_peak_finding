@@ -67,7 +67,7 @@ class PeakTreeMethods(ChainedAttributes):
     def dataframe(self,
                   nodes=None,
                   generate_columns=["node", "parent", "children", "high",
-                                    "low", "root", "full", "mode",
+                                    "low", "root", "full", "top",
                                     "is_nonroot", "has_children", "size",
                                     "height", "base_height", "node_index"],
                   **kwargs,
@@ -75,7 +75,7 @@ class PeakTreeMethods(ChainedAttributes):
         """Return a dataframe with properties of PeakTree nodes."""
         if nodes is None:
             nodes = self.rootself
-        nodes = sorted(nodes, key=self.rootself.index)
+        nodes = sorted(nodes, key=self.rootself._index)
 
         table = {}
 
@@ -93,8 +93,8 @@ class PeakTreeMethods(ChainedAttributes):
             table["children"] = listing(self.rootself.children)
         if "full" in generate_columns:
             table["full"] = listing(self.rootself.full)
-        if "mode" in generate_columns:
-            table["mode"] = listing(self.rootself.mode)
+        if "top" in generate_columns:
+            table["top"] = listing(self.rootself.top)
         if "root" in generate_columns:
             table["root"] = self.rootself.root()
         if "high" in generate_columns:
@@ -114,7 +114,7 @@ class PeakTreeMethods(ChainedAttributes):
         if "has_children" in generate_columns:
             table["has_children"] = listing(self.rootself.has_children)
         if "node_index" in generate_columns:
-            table["node_index"] = listing(self.rootself.index)
+            table["node_index"] = listing(self.rootself._index)
 
         return (
             pl.DataFrame({**table, **kwargs})
@@ -128,7 +128,7 @@ class PeakTreeMethods(ChainedAttributes):
         return self.dataframe(
             nodes,
             generate_columns=[
-                "mode",
+                "top",
                 "high",
                 "children",
                 "low",
@@ -146,10 +146,10 @@ class PeakTreeMethods(ChainedAttributes):
         """Return dataframe with peak properties."""
         if nodes is None:
             nodes = self.rootself
-        nodes = sorted(nodes, key=self.rootself.index)
+        nodes = sorted(nodes, key=self.rootself._index)
         return self.dataframe(
             nodes,
-            generate_columns=["node", "size", "height", "base_height", "mode"],
+            generate_columns=["node", "size", "height", "base_height", "top"],
             start=[self.location[n][0]
                    for n in nodes
                    ],
@@ -180,7 +180,7 @@ class PeakTreeMethods(ChainedAttributes):
         """
         if nodes is None:
             nodes = self.rootself
-        nodes = sorted(nodes, key=self.rootself.index)
+        nodes = sorted(nodes, key=self.rootself._index)
         return self.dataframe(
             nodes,
             generate_columns=["node"],
@@ -199,9 +199,9 @@ class PeakTreeMethods(ChainedAttributes):
             full_distance=[len(list(full_path(self.rootself, n))) - 1
                            for n in nodes
                            ],
-            mode_distance=[len(list(self.rootself.mode_path(n))) - 1
-                           for n in nodes
-                           ],
+            top_distance=[len(list(self.rootself.top_path(n))) - 1
+                          for n in nodes
+                          ],
             degree=[len(self.rootself.children(n))
                     for n in nodes
                     ],
