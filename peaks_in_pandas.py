@@ -71,55 +71,60 @@ class PeakTreePandas(ChainedAttributes):
         for name in ("root_path top_path subtree high_descendants "
                      "low_descendants full_nodes leaf_nodes "
                      "branch_nodes linear_nodes").split():
-            setattr(self, name, lambda n: list(
-                getattr(self.rootself, name)(n)))
+            setattr(self, name, lambda node, attr=name:
+                    list(getattr(self.rootself, attr)(node)))
         self.set_definitions(**kwargs)
 
     def set_definitions(self, **kwargs):
-        """Set attributes with defined mappers."""
+        """Set attributes with functions, mappings or Series."""
         for name in kwargs:
             setattr(self, name, kwargs[name])
 
-    def series(self, column="node", filter=_default, *, definition={}, **kwargs,):
+    def series(self, name="node", filter=_default, *, definitions={}):
         """Return series with one row per PeakTree node."""
-        return self.dataframe(
-            columns=column, filter=filter, definitions=definition, **kwargs,
-        ).loc[:, column]
-
-    def dataframe(self, columns="node", filter=_default, *, definitions={}, **kwargs,):
-        """Return dataframe with one row per PeakTree node."""
-        if filter == _default:
+        if filter is _default:
             filter = self.rootself
         return (
-            pd.DataFrame(**kwargs)  # An empty dataframe
-            .pipe(self.assign_columns,
-                  columns=columns, filter=filter, definitions=definitions)
-        )
-
-    def assign_columns(self, dataframe, columns="", filter=_default, *, definitions={},):
-        """Assign new columns to a given dataframe."""
-        if filter is _default:
-            series = dataframe["node"]
-        else:
-            series = pd.Series(filter, name="node")
-        return (
-            dataframe
-            .assign(**{name: series.map(
+            pd.Series(filter)
+            .map(
                 definitions[name] if name in definitions
                 else getattr(self, name),
                 na_action='ignore',
             )
-                for name in columns.split()}
-            )
             .convert_dtypes()
+            .rename(name)
         )
 
-    def sort(self, df, by=_default, **kwargs):
-        """return sorted dataframe."""
-        if by is _default:
-            return df.sort_values(by="node", key=lambda col: col.map(self.rootself._index), **kwargs)
-        else:
-            return df.sort_values(by, **kwargs)
+    def dataframe(self, columns="node", filter=_default, *, definitions={}):
+        """Return dataframe with one row per PeakTree node."""
+        if filter is _default:
+            filter = self.rootself
+        series = pd.Series(filter)
+        return (
+            pd.concat(
+                [self.series(name, series, definitions=definitions)
+                 for name in columns.split()],
+                axis=1,
+            )
+        )
+
+    def assign_columns(self, dataframe, columns="", *, definitions={}):
+        """Assign new columns to a given dataframe."""
+        return (
+            dataframe.assign(
+                **{name: self.series(name, dataframe["node"], definitions=definitions)
+                   for name in columns.split()}
+            )
+        )
+
+    def sort(self, dataframe, by="_index", **kwargs):
+        """Return sorted dataframe."""
+        return dataframe.sort_values(
+            by="node",
+            key=lambda col: col.map(getattr(self.rootself, by)),
+            ignore_index=True,
+            **kwargs,
+        )
 
     # Out-of-the-box dataframes:
 
