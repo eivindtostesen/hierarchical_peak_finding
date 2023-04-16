@@ -12,30 +12,12 @@ Created on Sat Jan  7 16:29:38 2023
 
 
 import pandas as pd
+from itertools import chain
 from utilities import ChainedAttributes
 
 
 # Alias when None means "use default":
 _default = None
-
-
-# Functions:
-
-
-def _siblings(tree, node, exclude_self=False):
-    """Return tuple with siblings including input node."""
-    if tree.is_nonroot(node):
-        siblings = list(tree.children(tree.parent(node)))
-        if exclude_self:
-            siblings.remove(node)
-        return tuple(siblings)
-    else:
-        return ()
-
-
-def _full_path(tree, node):
-    """Yield nodes on path to the full node."""
-    return tree.path(node, tree.full(node), tree.parent)
 
 
 # Classes:
@@ -147,3 +129,43 @@ class PeakTreePandas(ChainedAttributes):
         df = pd.DataFrame(self.rootself.as_dict_of_dicts())
         df.index.name = "node"
         return df.reset_index().convert_dtypes().pipe(self.sort)
+
+    def tree_structure(self):
+        """Return dataframe with topological attributes."""
+        return self.dataframe(
+            "top children node parent full root",
+            filter=chain.from_iterable(
+                self.rootself.path(node, self.rootself.full(node), self.rootself.parent)
+                for node in self.rootself.leaf_nodes()
+            ),
+        )
+
+    def numeric_properties(self):
+        """Return dataframe with numeric (data values) properties."""
+        if hasattr(self, "value_slice"):
+            columns = "node height size base_height value_slice"
+        else:
+            columns = "node height size base_height"
+        return (
+            self.dataframe(columns)
+            .pipe(self.sort, "size", ascending=False)
+            .pipe(self.sort, "height", ascending=False)
+        )
+
+    def location_properties(self):
+        """Return dataframe with locational (data labels) properties."""
+        df = self.dataframe(
+            "node location start end",
+            definitions=dict(
+                location=lambda n: list(self.location[n]),
+            ),
+        )
+        if hasattr(self, "label_slice"):
+            df = df.pipe(
+                self.assign_columns,
+                columns="label_slice slice_length",
+                definitions=dict(
+                    slice_length=lambda n: len(self.slices[n][0]),
+                ),
+            )
+        return df
