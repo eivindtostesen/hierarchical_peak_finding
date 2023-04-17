@@ -111,14 +111,14 @@ def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
 def slices(start, end, labels, values):
     """Return tuple: label_slice, value_slice."""
     i, j = labels.index(start), labels.index(end)
-    return labels[i: j+1], values[i: j+1]
+    return labels[i : j + 1], values[i : j + 1]
 
 
 def flanks(start, end, labels, values):
     """Return tuple: left_flank, right_flank."""
     i, j = labels.index(start), labels.index(end)
-    left_flank = (labels[i-1], values[i-1]) if i > 0 else None
-    right_flank = (labels[j+1], values[j+1]) if j < len(labels)-1 else None
+    left_flank = (labels[i - 1], values[i - 1]) if i > 0 else None
+    right_flank = (labels[j + 1], values[j + 1]) if j < len(labels) - 1 else None
     return left_flank, right_flank
 
 
@@ -171,8 +171,8 @@ class PeakTree:
         return len(self._data)
 
     def __matmul__(self, other):
-        """Return product with other tree (PeakTree or FrameTree)."""
-        return FrameTree(self, other)
+        """Return product with other tree (PeakTree or HyperPeakTree)."""
+        return HyperPeakTree(self, other)
 
     def __str__(self):
         """Return printable tree structure."""
@@ -184,17 +184,14 @@ class PeakTree:
         for full in self.full_nodes(localroot):
             if not self.has_children(full):
                 continue
-            for node in self.path(self.top(full),
-                                  self.high(full),
-                                  self.parent
-                                  ):
-                str += f'{node}'
+            for node in self.path(self.top(full), self.high(full), self.parent):
+                str += f"{node}"
                 if len(self.children(self.parent(node))) == 2:
-                    str += f' /& {self.low(self.parent(node))[0]}/'
+                    str += f" /& {self.low(self.parent(node))[0]}/"
                 if len(self.children(self.parent(node))) > 2:
-                    str += f' /& {self.low(self.parent(node))}/'
-                str += ' => '
-            str += f'{full}.\n'
+                    str += f" /& {self.low(self.parent(node))}/"
+                str += " => "
+            str += f"{full}.\n"
         return str
 
     def as_dict_of_dicts(self):
@@ -234,7 +231,7 @@ class PeakTree:
 
     def size(self, node):
         """Return vertical distance between top and base."""
-        return self.height(node) - self.base_height(node)
+        return abs(self.height(node) - self.base_height(node))
 
     def parent(self, node):
         """Return the input peak merged with its neighboring peak."""
@@ -267,7 +264,7 @@ class PeakTree:
         """Yield nodes on a path in the tree."""
         climber = start
         yield climber
-        while (climber != stop):
+        while climber != stop:
             climber = step(climber)
             yield climber
 
@@ -322,24 +319,27 @@ class PeakTree:
         # defaults:
         if localroot is None:
             localroot = self.root()
-        return (node for node in self.subtree(localroot)
-                if len(self.children(node)) == 0)
+        return (
+            node for node in self.subtree(localroot) if len(self.children(node)) == 0
+        )
 
     def branch_nodes(self, localroot=None):
         """Yield nodes in (sub)tree with two or more children."""
         # defaults:
         if localroot is None:
             localroot = self.root()
-        return (node for node in self.subtree(localroot)
-                if len(self.children(node)) > 1)
+        return (
+            node for node in self.subtree(localroot) if len(self.children(node)) > 1
+        )
 
     def linear_nodes(self, localroot=None):
         """Yield nodes in (sub)tree with one child."""
         # defaults:
         if localroot is None:
             localroot = self.root()
-        return (node for node in self.subtree(localroot)
-                if len(self.children(node)) == 1)
+        return (
+            node for node in self.subtree(localroot) if len(self.children(node)) == 1
+        )
 
     def filter(self, *, maxsize, localroot=None):
         """Yield subtree nodes filtered by size."""
@@ -423,29 +423,30 @@ class PeakTree:
             yield self.root()
             yield from self.low_descendants()
 
-        self._full = {node: full for full in fullnodes()
-                      for node in self.top_path(full)}
+        self._full = {
+            node: full for full in fullnodes() for node in self.top_path(full)
+        }
 
 
-class FrameTree(PeakTree):
+class HyperPeakTree(PeakTree):
     """Tree of higher-dimensional peaks.
 
-    A FrameTree represents the hierarchical structure of peaks
+    A HyperPeakTree represents the hierarchical structure of peaks
     and subpeaks in more dimensions, such as a mountain landscape
     with height z as a function of x and y.
 
-    A FrameTree assumes dimensional decoupling, i.e. the landscape is a
+    A HyperPeakTree assumes dimensional decoupling, i.e. the landscape is a
     sum z(x,y) = f(x) + g(y) or a product z(x,y) = f(x) * g(y).
 
-    A FrameTree is constructed as a pair of lower-dimensional trees
-    of type PeakTree or Frametree.
+    A HyperPeakTree is constructed as a pair of lower-dimensional trees
+    of type PeakTree or HyperPeakTree.
 
-    A Frametree is a kind of product tree, but it is not the Cartesian
+    A HyperPeakTree is a kind of product tree, but it is not the Cartesian
     product.
 
     Notes
     -----
-    Background literature for the FrameTree class is
+    Background literature for the HyperPeakTree class is
     the subsection titled "2D peaks" in the article [1]_.
 
     References
@@ -461,31 +462,23 @@ class FrameTree(PeakTree):
         self.R = right_tree
 
     def __contains__(self, frame):
-        """Return True if the input is a node in the FrameTree."""
+        """Return True if the input is a node in the HyperPeakTree."""
         a, b = frame
         # test if frame is 'sigma-above':
         return (
-            (a == self.L.root()
-             or
-             self.L.size(self.L.parent(a)) > self.R.size(b)
-             )
-            and
-            (b == self.R.root()
-             or
-             self.R.size(self.R.parent(b)) > self.L.size(a)
-             )
-        )
+            a == self.L.root() or self.L.size(self.L.parent(a)) > self.R.size(b)
+        ) and (b == self.R.root() or self.R.size(self.R.parent(b)) > self.L.size(a))
 
     def __iter__(self):
-        """Iterate over nodes in the FrameTree."""
+        """Iterate over nodes in the HyperPeakTree."""
         yield from self.subtree()
 
     def __len__(self):
-        """Return number of nodes in the FrameTree."""
+        """Return number of nodes in the HyperPeakTree."""
         return len(list(self.__iter__()))
 
     def root(self):
-        """Return the root node of the FrameTree."""
+        """Return the root node of the HyperPeakTree."""
         return (self.L.root(), self.R.root())
 
     def is_nonroot(self, frame):
@@ -536,9 +529,9 @@ class FrameTree(PeakTree):
         elif self.L.size(a) < self.R.size(b):
             return tuple((a, cb) for cb in self.R.children(b))
         elif self.L.size(a) == self.R.size(b):
-            return tuple((ca, cb) for ca in self.L.children(a)
-                         for cb in self.R.children(b)
-                         )
+            return tuple(
+                (ca, cb) for ca in self.L.children(a) for cb in self.R.children(b)
+            )
 
     def high(self, frame):
         """Return the child (subframe) that has the same top."""
