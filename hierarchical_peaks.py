@@ -61,8 +61,8 @@ def filter_local_extrema(datapoints):
         yield x2, e2
 
 
-def for_binary_tree(datapoints):
-    """Return filtered data with cut ends."""
+def nonlinear_peaktree(datapoints):
+    """Return PeakTree without linear nodes."""
     data = dict(filter_local_extrema(datapoints))
     nodes = list(data)
     # cut possible minimum at the beginning:
@@ -73,7 +73,7 @@ def for_binary_tree(datapoints):
     if data[nodes[-1]] < data[nodes[-2]]:
         del data[nodes[-1]]
         del nodes[-1]
-    return data
+    return PeakTree(data)
 
 
 def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
