@@ -461,10 +461,10 @@ class HyperPeakTree(PeakTree):
         self.L = left_tree
         self.R = right_tree
 
-    def __contains__(self, frame):
+    def __contains__(self, pair):
         """Return True if the input is a node in the HyperPeakTree."""
-        a, b = frame
-        # test if frame is 'sigma-above':
+        a, b = pair
+        # test if (a, b) is 'sigma-above':
         return (
             a == self.L.root() or self.L.size(self.L.parent(a)) > self.R.size(b)
         ) and (b == self.R.root() or self.R.size(self.R.parent(b)) > self.L.size(a))
@@ -481,29 +481,29 @@ class HyperPeakTree(PeakTree):
         """Return the root node of the HyperPeakTree."""
         return (self.L.root(), self.R.root())
 
-    def is_nonroot(self, frame):
-        """Return True if the input frame has a parent."""
-        a, b = frame
+    def is_nonroot(self, node):
+        """Return True if given node has a parent."""
+        a, b = node
         return self.L.is_nonroot(a) or self.R.is_nonroot(b)
 
-    def top(self, frame):
-        """Return the input frame's top (a leaf node)."""
-        a, b = frame
+    def top(self, node):
+        """Return the given node's top (a leaf node)."""
+        a, b = node
         return (self.L.top(a), self.R.top(b))
 
-    def has_children(self, frame):
-        """Return True if the input frame has subframes."""
-        a, b = frame
+    def has_children(self, node):
+        """Return True if given node has children."""
+        a, b = node
         return self.L.has_children(a) or self.R.has_children(b)
 
-    def size(self, frame):
-        """Return the input frame's size."""
-        a, b = frame
+    def size(self, node):
+        """Return the given node's size."""
+        a, b = node
         return max(self.L.size(a), self.R.size(b))
 
-    def parent(self, frame):
-        """Return the input frame merged with its neighboring frame(s)."""
-        a, b = frame
+    def parent(self, node):
+        """Return the given node's parent or None."""
+        a, b = node
         if self.L.is_nonroot(a) and self.R.is_nonroot(b):
             pa, pb = self.L.parent(a), self.R.parent(b)
             if self.L.size(pa) > self.R.size(pb):
@@ -521,9 +521,9 @@ class HyperPeakTree(PeakTree):
             # then a is root and b nonroot
             return (a, self.R.parent(b))
 
-    def children(self, frame):
-        """Return the input frame's subframe(s)."""
-        a, b = frame
+    def children(self, node):
+        """Return the given node's children."""
+        a, b = node
         if self.L.size(a) > self.R.size(b):
             return tuple((ca, b) for ca in self.L.children(a))
         elif self.L.size(a) < self.R.size(b):
@@ -533,9 +533,9 @@ class HyperPeakTree(PeakTree):
                 (ca, cb) for ca in self.L.children(a) for cb in self.R.children(b)
             )
 
-    def high(self, frame):
-        """Return the child (subframe) that has the same top."""
-        a, b = frame
+    def high(self, node):
+        """Return the child that has the same top."""
+        a, b = node
         if self.L.size(a) > self.R.size(b):
             return (self.L.high(a), b)
         elif self.L.size(a) < self.R.size(b):
@@ -543,9 +543,9 @@ class HyperPeakTree(PeakTree):
         elif self.L.size(a) == self.R.size(b):
             return (self.L.high(a), self.R.high(b))
 
-    def full(self, frame):
-        """Return the largest frame with same top as the input frame."""
-        climber = frame
+    def full(self, node):
+        """Return the largest node with same top as given node."""
+        climber = node
         while self.is_nonroot(climber):
             nextstep = self.parent(climber)
             if self.top(nextstep) == self.top(climber):
@@ -554,9 +554,9 @@ class HyperPeakTree(PeakTree):
                 break
         return climber
 
-    def _index(self, frame):
-        """Return a tuple of (nested) indices for the input frame."""
-        a, b = frame
+    def _index(self, node):
+        """Return a tuple of (nested) indices for given node."""
+        a, b = node
         return self.L._index(a), self.R._index(b)
 
     def leaf_nodes(self):
@@ -566,7 +566,7 @@ class HyperPeakTree(PeakTree):
                 yield a, b
 
     def filter(self, *, maxsize, localroot=None):
-        """Yield grid frames contained in the input frame."""
+        """Yield grid nodes in given subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
@@ -579,11 +579,11 @@ class HyperPeakTree(PeakTree):
         """Return that it is NotImplemented."""
         return NotImplemented
 
-    def height(self, frame):
+    def height(self, node):
         """Return that height is NotImplemented."""
         return NotImplemented
 
-    def base_height(self, frame):
+    def base_height(self, node):
         """Return that base_height is NotImplemented."""
         return NotImplemented
 
