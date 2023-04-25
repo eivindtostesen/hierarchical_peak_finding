@@ -141,7 +141,7 @@ class PeakTreePandas(ChainedAttributes):
         )
 
     def numeric_properties(self):
-        """Return dataframe with numeric (data values) properties."""
+        """Return dataframe with numeric (vertical) properties."""
         if hasattr(self, "value_slice"):
             columns = "node height size base_height value_slice"
         else:
@@ -153,7 +153,7 @@ class PeakTreePandas(ChainedAttributes):
         )
 
     def location_properties(self):
-        """Return dataframe with locational (data labels) properties."""
+        """Return dataframe with locational (horizontal) properties."""
         df = self.dataframe(
             "node location start end",
             definitions=dict(

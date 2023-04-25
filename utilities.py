@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
+"""Python module containing tools and utilities.
+
 Created on Thu Dec  1 15:48:10 2022
 
 @author: Eivind Tostesen
@@ -11,7 +12,7 @@ Created on Thu Dec  1 15:48:10 2022
 # Classes:
 
 
-class ChainedAttributes():
+class ChainedAttributes:
     """Base class for adding chained attributes to naive objects."""
 
     def __init__(self):
