@@ -149,7 +149,7 @@ class PeakTreePandas(ChainedAttributes):
         return (
             self.dataframe(columns)
             .pipe(self.sort, "size", ascending=False)
-            .pipe(self.sort, "height", ascending=False)
+            .pipe(self.sort, "height", ascending=False, kind="stable")
         )
 
     def location_properties(self):
