@@ -205,6 +205,22 @@ class PeakTree:
             "_root": self._root,
         }
 
+    def set_nodes(self, changes={}):
+        """Replace tree nodes by using given mapping."""
+
+        def new(node):
+            return changes[node] if node in changes else node
+
+        self._data = dict((new(x), y) for (x, y) in self._data.items())
+        self._top = dict((new(x), new(y)) for (x, y) in self._top.items())
+        self._full = dict((new(x), new(y)) for (x, y) in self._full.items())
+        self._parent = dict((new(x), new(y)) for (x, y) in self._parent.items())
+        self._children = dict(
+            (new(x), tuple(new(z) for z in y)) for (x, y) in self._children.items()
+        )
+        self._root = new(self._root)
+        return None
+
     def root(self):
         """Return the root node of the PeakTree."""
         return self._root
@@ -576,6 +592,10 @@ class FrameTree(PeakTree):
                 yield a, b
 
     def as_dict_of_dicts(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def set_nodes(self):
         """Return that it is NotImplemented."""
         return NotImplemented
 
