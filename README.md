@@ -7,11 +7,9 @@ Requires Python 3.8+
 ![peak plot](output.png)
 
 ## Howto files
-For documentation of the usage of `hierarchical_peaks`, jupyter notebooks are (or will be) included:
+For tutorials and documentation of the usage, jupyter notebooks are (or will be) included:
 * [How_to_plot_with_matplotlib.ipynb](How_to_plot_with_matplotlib.ipynb)
-* [How_to_initialize.ipynb](How_to_initialize.ipynb)
-* [How_to_plot_tree.ipynb](How_to_plot_tree.ipynb)
-* [How_to_find_peaks.ipynb](How_to_find_peaks.ipynb)
+* [dataframes_tutorial.ipynb](dataframes_tutorial.ipynb)
 
 ## Citation
 In publications, please cite the current homepage of this software,
