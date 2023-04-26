@@ -111,14 +111,14 @@ def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
 def slices(start, end, labels, values):
     """Return tuple: label_slice, value_slice."""
     i, j = labels.index(start), labels.index(end)
-    return labels[i: j+1], values[i: j+1]
+    return labels[i : j + 1], values[i : j + 1]
 
 
 def flanks(start, end, labels, values):
     """Return tuple: left_flank, right_flank."""
     i, j = labels.index(start), labels.index(end)
-    left_flank = (labels[i-1], values[i-1]) if i > 0 else None
-    right_flank = (labels[j+1], values[j+1]) if j < len(labels)-1 else None
+    left_flank = (labels[i - 1], values[i - 1]) if i > 0 else None
+    right_flank = (labels[j + 1], values[j + 1]) if j < len(labels) - 1 else None
     return left_flank, right_flank
 
 
@@ -184,29 +184,42 @@ class PeakTree:
         for full in self.full_nodes(localroot):
             if not self.has_children(full):
                 continue
-            for node in self.path(self.top(full),
-                                  self.high(full),
-                                  self.parent
-                                  ):
-                str += f'{node}'
+            for node in self.path(self.top(full), self.high(full), self.parent):
+                str += f"{node}"
                 if len(self.children(self.parent(node))) == 2:
-                    str += f' /& {self.low(self.parent(node))[0]}/'
+                    str += f" /& {self.low(self.parent(node))[0]}/"
                 if len(self.children(self.parent(node))) > 2:
-                    str += f' /& {self.low(self.parent(node))}/'
-                str += ' => '
-            str += f'{full}.\n'
+                    str += f" /& {self.low(self.parent(node))}/"
+                str += " => "
+            str += f"{full}.\n"
         return str
 
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
         return {
-            "data": self._data,
-            "parent": self._parent,
-            "children": self._children,
-            "top": self._top,
-            "full": self._full,
-            "root": self._root,
+            "_data": self._data,
+            "_parent": self._parent,
+            "_children": self._children,
+            "_top": self._top,
+            "_full": self._full,
+            "_root": self._root,
         }
+
+    def set_nodes(self, changes={}):
+        """Replace tree nodes by using given mapping."""
+
+        def new(node):
+            return changes[node] if node in changes else node
+
+        self._data = dict((new(x), y) for (x, y) in self._data.items())
+        self._top = dict((new(x), new(y)) for (x, y) in self._top.items())
+        self._full = dict((new(x), new(y)) for (x, y) in self._full.items())
+        self._parent = dict((new(x), new(y)) for (x, y) in self._parent.items())
+        self._children = dict(
+            (new(x), tuple(new(z) for z in y)) for (x, y) in self._children.items()
+        )
+        self._root = new(self._root)
+        return None
 
     def root(self):
         """Return the root node of the PeakTree."""
@@ -267,7 +280,7 @@ class PeakTree:
         """Yield nodes on a path in the tree."""
         climber = start
         yield climber
-        while (climber != stop):
+        while climber != stop:
             climber = step(climber)
             yield climber
 
@@ -322,24 +335,27 @@ class PeakTree:
         # defaults:
         if localroot is None:
             localroot = self.root()
-        return (node for node in self.subtree(localroot)
-                if len(self.children(node)) == 0)
+        return (
+            node for node in self.subtree(localroot) if len(self.children(node)) == 0
+        )
 
     def branch_nodes(self, localroot=None):
         """Yield nodes in (sub)tree with two or more children."""
         # defaults:
         if localroot is None:
             localroot = self.root()
-        return (node for node in self.subtree(localroot)
-                if len(self.children(node)) > 1)
+        return (
+            node for node in self.subtree(localroot) if len(self.children(node)) > 1
+        )
 
     def linear_nodes(self, localroot=None):
         """Yield nodes in (sub)tree with one child."""
         # defaults:
         if localroot is None:
             localroot = self.root()
-        return (node for node in self.subtree(localroot)
-                if len(self.children(node)) == 1)
+        return (
+            node for node in self.subtree(localroot) if len(self.children(node)) == 1
+        )
 
     def filter(self, *, maxsize, localroot=None):
         """Yield subtree nodes filtered by size."""
@@ -423,8 +439,9 @@ class PeakTree:
             yield self.root()
             yield from self.low_descendants()
 
-        self._full = {node: full for full in fullnodes()
-                      for node in self.top_path(full)}
+        self._full = {
+            node: full for full in fullnodes() for node in self.top_path(full)
+        }
 
 
 class FrameTree(PeakTree):
@@ -465,16 +482,8 @@ class FrameTree(PeakTree):
         a, b = frame
         # test if frame is 'sigma-above':
         return (
-            (a == self.L.root()
-             or
-             self.L.size(self.L.parent(a)) > self.R.size(b)
-             )
-            and
-            (b == self.R.root()
-             or
-             self.R.size(self.R.parent(b)) > self.L.size(a)
-             )
-        )
+            a == self.L.root() or self.L.size(self.L.parent(a)) > self.R.size(b)
+        ) and (b == self.R.root() or self.R.size(self.R.parent(b)) > self.L.size(a))
 
     def __iter__(self):
         """Iterate over nodes in the FrameTree."""
@@ -536,9 +545,9 @@ class FrameTree(PeakTree):
         elif self.L.size(a) < self.R.size(b):
             return tuple((a, cb) for cb in self.R.children(b))
         elif self.L.size(a) == self.R.size(b):
-            return tuple((ca, cb) for ca in self.L.children(a)
-                         for cb in self.R.children(b)
-                         )
+            return tuple(
+                (ca, cb) for ca in self.L.children(a) for cb in self.R.children(b)
+            )
 
     def high(self, frame):
         """Return the child (subframe) that has the same top."""
@@ -583,6 +592,10 @@ class FrameTree(PeakTree):
                 yield a, b
 
     def as_dict_of_dicts(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def set_nodes(self):
         """Return that it is NotImplemented."""
         return NotImplemented
 
