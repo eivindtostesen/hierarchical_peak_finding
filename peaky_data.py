@@ -17,22 +17,22 @@ from itertools import accumulate, chain
 
 
 def discrete_steps(
-        length=10,
-        moves=[1, -1],
-        weights=None,
-        randomseed="It's...",
-        ):
+    length=10,
+    moves=[1, -1],
+    weights=None,
+    randomseed="It's...",
+):
     """Return list of discrete random steps."""
     random.seed(a=randomseed)
     return random.choices(population=moves, weights=weights, k=length)
 
 
 def continuous_steps(
-        length=10,
-        moves=[1, -1],
-        weights=None,
-        randomseed="It's...",
-        ):
+    length=10,
+    moves=[1, -1],
+    weights=None,
+    randomseed="It's...",
+):
     """Return list of continuous random steps."""
     if weights is None:
         # weights can also be set to random.triangular
@@ -42,16 +42,28 @@ def continuous_steps(
 
 
 def alternating_steps(
-        steps1=discrete_steps(length=5, moves=[-1, -2, -3]),
-        steps2=discrete_steps(length=5, moves=[1, 2, 3]),
-        ):
+    steps1=discrete_steps(length=5, moves=[-1, -2, -3]),
+    steps2=discrete_steps(length=5, moves=[1, 2, 3]),
+):
     """Return alternating list of steps."""
     return list(chain.from_iterable(zip(steps1, steps2)))
 
 
 def randomwalk(
-        start=0,
-        steps=discrete_steps(length=100, moves=[2, 1, 0, -1, -2]),
-        ):
+    start=0,
+    steps=discrete_steps(length=100, moves=[2, 1, 0, -1, -2]),
+):
     """Return random walk as a list."""
     return list(accumulate(steps, initial=start))
+
+
+def example_1(length=45, *, randomseed="it's....."):
+    """Return mini example data set as two lists X, Y."""
+    return list(range(length)), randomwalk(
+        start=5.0,
+        steps=discrete_steps(
+            length=length - 1,
+            moves=[0.2, 0.1, 0, -0.1, -0.2],
+            randomseed=randomseed,
+        ),
+    )
