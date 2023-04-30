@@ -197,13 +197,29 @@ class PeakTree:
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
         return {
-            "data": self._data,
-            "parent": self._parent,
-            "children": self._children,
-            "top": self._top,
-            "full": self._full,
-            "root": self._root,
+            "_data": self._data,
+            "_parent": self._parent,
+            "_children": self._children,
+            "_top": self._top,
+            "_full": self._full,
+            "_root": self._root,
         }
+
+    def set_nodes(self, changes={}):
+        """Replace tree nodes by using given mapping."""
+
+        def new(node):
+            return changes[node] if node in changes else node
+
+        self._data = dict((new(x), y) for (x, y) in self._data.items())
+        self._top = dict((new(x), new(y)) for (x, y) in self._top.items())
+        self._full = dict((new(x), new(y)) for (x, y) in self._full.items())
+        self._parent = dict((new(x), new(y)) for (x, y) in self._parent.items())
+        self._children = dict(
+            (new(x), tuple(new(z) for z in y)) for (x, y) in self._children.items()
+        )
+        self._root = new(self._root)
+        return None
 
     def root(self):
         """Return the root node of the PeakTree."""
@@ -579,7 +595,11 @@ class HyperPeakTree(PeakTree):
         """Return that it is NotImplemented."""
         return NotImplemented
 
-    def height(self, node):
+    def set_nodes(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def height(self, frame):
         """Return that height is NotImplemented."""
         return NotImplemented
 
