@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """Python module for using pandas in peak analysis.
 
+Tested with Pandas version 1.4.4
+
 Created on Sat Jan  7 16:29:38 2023
 
 @author: Eivind Tostesen
@@ -10,193 +12,160 @@ Created on Sat Jan  7 16:29:38 2023
 
 
 import pandas as pd
+from itertools import chain
 from utilities import ChainedAttributes
 
 
-# Functions:
-
-
-def siblings(tree, node, exclude_self=False):
-    """Return tuple with siblings including input node."""
-    if tree.is_nonroot(node):
-        siblings = list(tree.children(tree.parent(node)))
-        if exclude_self:
-            siblings.remove(node)
-        return tuple(siblings)
-    else:
-        return ()
-
-
-def full_path(tree, node):
-    """Yield nodes on path to the full node."""
-    return tree.path(node, tree.full(node), tree.parent)
+# Alias when None means "use default":
+_default = None
 
 
 # Classes:
 
 
-class PeakTreeMethods(ChainedAttributes):
+class PeakTreePandas(ChainedAttributes):
     """Pandas methods to be owned by a PeakTree."""
 
-    def __init__(self, tree, attrname='pandas',
-                 location={}, slices={}, flanks={},
-                 ):
-        """Attach a pandas-aware object to a PeakTree."""
+    def __init__(
+        self,
+        tree,
+        attrname="pandas",
+        location={},
+        slices={},
+        flanks={},
+        **kwargs,
+    ):
+        """Attach this pandas-aware object to a PeakTree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
         self.location = location
         self.slices = slices
         self.flanks = flanks
+        if self.location:
+            self.start = lambda n: self.location[n][0]
+            self.end = lambda n: self.location[n][1]
+        if self.slices:
+            self.label_slice = lambda n: self.slices[n][0]
+            self.value_slice = lambda n: self.slices[n][1]
+        if self.flanks:
+            self.left_flank = lambda n: self.flanks[n][0]
+            self.right_flank = lambda n: self.flanks[n][1]
+        self.node = lambda n: n
+        self.root = lambda n: self.rootself.root()
+        self.high = (
+            lambda n: self.rootself.high(n) if self.rootself.has_children(n) else None
+        )
+        for name in (
+            "parent children low full top is_nonroot "
+            "has_children size height base_height _index"
+        ).split():
+            setattr(self, name, getattr(self.rootself, name))
+        for name in (
+            "root_path top_path subtree high_descendants "
+            "low_descendants full_nodes leaf_nodes "
+            "branch_nodes linear_nodes"
+        ).split():
+            setattr(
+                self,
+                name,
+                lambda node, attr=name: list(getattr(self.rootself, attr)(node)),
+            )
+        self.set_definitions(**kwargs)
+
+    def set_definitions(self, **kwargs):
+        """Set attributes with functions, mappings or Series."""
+        for name in kwargs:
+            setattr(self, name, kwargs[name])
+
+    def series(self, name="node", filter=_default, *, definitions={}):
+        """Return series with one row per PeakTree node."""
+        if filter is _default:
+            filter = self.rootself
+        return (
+            pd.Series(filter)
+            .map(
+                definitions[name] if name in definitions else getattr(self, name),
+                na_action="ignore",
+            )
+            .convert_dtypes()
+            .rename(name)
+        )
+
+    def dataframe(self, columns="node", filter=_default, *, definitions={}):
+        """Return dataframe with one row per PeakTree node."""
+        if filter is _default:
+            filter = self.rootself
+        series = pd.Series(filter)
+        return pd.concat(
+            [
+                self.series(name, series, definitions=definitions)
+                for name in columns.split()
+            ],
+            axis=1,
+        )
+
+    def assign_columns(self, dataframe, columns="", *, definitions={}):
+        """Assign extra columns to a given dataframe."""
+        return dataframe.assign(
+            **{
+                name: self.series(name, dataframe["node"], definitions=definitions)
+                for name in columns.split()
+            }
+        )
+
+    def sort(self, dataframe, by="_index", **kwargs):
+        """Return sorted dataframe."""
+        return dataframe.sort_values(
+            by="node",
+            key=lambda col: col.map(getattr(self.rootself, by)),
+            ignore_index=True,
+            **kwargs,
+        )
+
+    # Out-of-the-box dataframes:
 
     def dump_data_attributes(self):
         """Return a dump of the PeakTree's data attributes."""
         df = pd.DataFrame(self.rootself.as_dict_of_dicts())
         df.index.name = "node"
+        return df.reset_index().convert_dtypes().pipe(self.sort)
+
+    def tree_structure(self):
+        """Return dataframe with topological attributes."""
+        return self.dataframe(
+            "top children node parent full root",
+            filter=chain.from_iterable(
+                self.rootself.path(node, self.rootself.full(node), self.rootself.parent)
+                for node in self.rootself.leaf_nodes()
+            ),
+        )
+
+    def numeric_properties(self):
+        """Return dataframe with numeric (vertical) properties."""
+        if hasattr(self, "value_slice"):
+            columns = "node height size base_height value_slice"
+        else:
+            columns = "node height size base_height"
         return (
-            df
-            .reset_index()
-            .convert_dtypes()
-            .sort_values(by="node",
-                         key=lambda col: col.map(self.rootself._index),
-                         )
+            self.dataframe(columns)
+            .pipe(self.sort, "size", ascending=False)
+            .pipe(self.sort, "height", ascending=False, kind="stable")
         )
 
-    def dataframe(self,
-                  nodes=None,
-                  generate_columns=["node", "parent", "children", "high",
-                                    "low", "root", "full", "top",
-                                    "is_nonroot", "has_children", "size",
-                                    "height", "base_height", "node_index"],
-                  **kwargs,
-                  ):
-        """Return a dataframe with properties of PeakTree nodes."""
-        if nodes is None:
-            nodes = self.rootself
-        table = {}
-
-        def mapping(method):
-            return {node: method(node) for node in nodes}
-
-        if "node" in generate_columns:
-            table["node"] = {n: n for n in nodes}
-        if "parent" in generate_columns:
-            table["parent"] = mapping(self.rootself.parent)
-        if "children" in generate_columns:
-            table["children"] = mapping(self.rootself.children)
-        if "full" in generate_columns:
-            table["full"] = mapping(self.rootself.full)
-        if "top" in generate_columns:
-            table["top"] = mapping(self.rootself.top)
-        if "root" in generate_columns:
-            table["root"] = self.rootself.root()
-        if "high" in generate_columns:
-            table["high"] = {n: self.rootself.high(n)
-                             for n in nodes
-                             if self.rootself.has_children(n)
-                             }
-        if "low" in generate_columns:
-            table["low"] = mapping(self.rootself.low)
-        if "size" in generate_columns:
-            table["size"] = mapping(self.rootself.size)
-        if "base_height" in generate_columns:
-            table["base_height"] = mapping(self.rootself.base_height)
-        if "height" in generate_columns:
-            table["height"] = mapping(self.rootself.height)
-        if "is_nonroot" in generate_columns:
-            table["is_nonroot"] = mapping(self.rootself.is_nonroot)
-        if "has_children" in generate_columns:
-            table["has_children"] = mapping(self.rootself.has_children)
-        if "node_index" in generate_columns:
-            table["node_index"] = mapping(self.rootself._index)
-
-        return (
-            pd.DataFrame({**table, **kwargs},
-                         columns=generate_columns + list(kwargs.keys()),
-                         )
-            .convert_dtypes()
-            .sort_index(key=lambda col: col.map(self.rootself._index))
-            .reset_index(drop=True)
+    def location_properties(self):
+        """Return dataframe with locational (horizontal) properties."""
+        df = self.dataframe(
+            "node location start end",
+            definitions=dict(
+                location=lambda n: list(self.location[n]),
+            ),
         )
-
-    def tree_structure(self, nodes=None):
-        """Return dataframe with hierarchical properties."""
-        return self.dataframe(
-            nodes,
-            generate_columns=[
-                "top",
-                "high",
-                "children",
-                "low",
-                "node",
-                "parent",
-                "full",
-                "root",
-                "is_nonroot",
-                "has_children",
-                "node_index",
-            ]
-        )
-
-    def peak_properties(self, nodes=None):
-        """Return dataframe with peak properties."""
-        if nodes is None:
-            nodes = self.rootself
-        return self.dataframe(
-            nodes,
-            generate_columns=["node", "size", "height", "base_height", "top"],
-            start={n: self.location[n][0]
-                   for n in nodes
-                   },
-            end={n: self.location[n][1]
-                 for n in nodes
-                 },
-            label_slice={n: self.slices[n][0]
-                         for n in nodes
-                         },
-            value_slice={n: self.slices[n][1]
-                         for n in nodes
-                         },
-            slice_length={n: len(self.slices[n][0])
-                          for n in nodes
-                          },
-            left_flank={n: self.flanks[n][0]
-                        for n in nodes
-                        },
-            right_flank={n: self.flanks[n][1]
-                         for n in nodes
-                         },
-        )
-
-    def graph_theoretical_properties(self, nodes=None):
-        """Return dataframe with graph theoretical properties.
-
-        Terminology: https://en.wikipedia.org/wiki/Tree_(data_structure)
-        """
-        if nodes is None:
-            nodes = self.rootself
-        return self.dataframe(
-            nodes,
-            generate_columns=["node"],
-            siblings={n: siblings(self.rootself, n)
-                      for n in nodes
-                      },
-            sibling_index={n: siblings(self.rootself, n).index(n)
-                           for n in nodes
-                           if self.rootself.is_nonroot(n)
-                           },
-            root_distance={n: len(list(self.rootself.root_path(n))) - 1
-                           for n in nodes
-                           },
-            full_distance={n: len(list(full_path(self.rootself, n))) - 1
-                           for n in nodes
-                           },
-            top_distance={n: len(list(self.rootself.top_path(n))) - 1
-                          for n in nodes
-                          },
-            degree={n: len(self.rootself.children(n))
-                    for n in nodes
-                    },
-            subtree_size={n: len(list(self.rootself.subtree(n)))
-                          for n in nodes
-                          },
-        )
+        if hasattr(self, "label_slice"):
+            df = df.pipe(
+                self.assign_columns,
+                columns="label_slice slice_length",
+                definitions=dict(
+                    slice_length=lambda n: len(self.slices[n][0]),
+                ),
+            )
+        return df
