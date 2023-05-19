@@ -67,3 +67,15 @@ def example_1(length=45, *, randomseed="it's....."):
             randomseed=randomseed,
         ),
     )
+
+
+def example_2(length=201, *, randomseed="It's..."):
+    """Return mini example data set as two lists X, Y."""
+    return list(range(1900, 1900 + length)), randomwalk(
+        start=0.0,
+        steps=discrete_steps(
+            length=length - 1,
+            moves=[-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0],
+            randomseed=randomseed,
+        ),
+    )
