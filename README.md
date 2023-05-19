@@ -8,7 +8,7 @@ Requires Python 3.8+
 
 ## Howto files
 For tutorials and documentation of the usage, jupyter notebooks are (or will be) included:
-* [How_to_plot_with_matplotlib.ipynb](How_to_plot_with_matplotlib.ipynb)
+* [plotting_tutorial.ipynb](plotting_tutorial.ipynb)
 * [dataframes_tutorial.ipynb](dataframes_tutorial.ipynb)
 
 ## Citation
