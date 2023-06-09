@@ -110,8 +110,8 @@ class NumSlice(SliceStr):
             "argmax",
             "argmin",
             "size",
-            "left",
-            "right",
+            "pre",
+            "post",
             "is_peak",
             "is_valley",
             "is_local_maximum",
@@ -122,14 +122,14 @@ class NumSlice(SliceStr):
         """Return "start:stop" - string."""
         return str(self)
 
-    def left(self):
+    def pre(self):
         """Return index of left neighbor if exists else None."""
         if self.start > 0:
             return self.start - 1
         else:
             return None
 
-    def right(self):
+    def post(self):
         """Return index of right neighbor if exists else None."""
         if self.stop < len(self.values):
             return self.end + 1
@@ -138,14 +138,14 @@ class NumSlice(SliceStr):
 
     def is_peak(self):
         """Return True if slice of values is a peak."""
-        return (self.left() is None or self.values[self.left()] < self.min) and (
-            self.right() is None or self.values[self.right()] < self.min
+        return (self.pre() is None or self.values[self.pre()] < self.min) and (
+            self.post() is None or self.values[self.post()] < self.min
         )
 
     def is_valley(self):
         """Return True if slice of values is a valley."""
-        return (self.left() is None or self.values[self.left()] > self.max) and (
-            self.right() is None or self.values[self.right()] > self.max
+        return (self.pre() is None or self.values[self.pre()] > self.max) and (
+            self.post() is None or self.values[self.post()] > self.max
         )
 
     def is_local_maximum(self):
