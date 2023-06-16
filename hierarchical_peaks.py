@@ -375,6 +375,42 @@ class PeakTree:
                 for child in self.low(climber):
                     yield from self.filter(maxsize=maxsize, localroot=child)
 
+    def innermost(self, nodes, localroot=None):
+        """Yield innermost nodes of the given nodes."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        filter = list(nodes)
+        countdown = {n: len(self.children(n)) for n in self.subtree(localroot)}
+        # Recursive "bottom-up" search via parents:
+        def _yield_or_propagate(node):
+            if node in filter:
+                yield node
+            elif node != localroot:
+                parent = self.parent(node)
+                countdown[parent] -= 1
+                if countdown[parent] == 0:
+                    yield from _yield_or_propagate(parent)
+
+        for node in self.leaf_nodes(localroot):
+            yield from _yield_or_propagate(node)
+
+    def outermost(self, nodes, localroot=None):
+        """Yield outermost nodes of the given nodes."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        filter = list(nodes)
+        # Recursive "top-down" search via children:
+        def _yield_or_branch(node):
+            if node in filter:
+                yield node
+            elif self.has_children(node):
+                for child in self.children(node):
+                    yield from _yield_or_branch(child)
+
+        yield from _yield_or_branch(localroot)
+
     # Initialization algorithms:
 
     def _find_parent_and_root(self):
