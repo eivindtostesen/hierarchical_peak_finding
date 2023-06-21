@@ -357,11 +357,13 @@ class PeakTree:
             node for node in self.subtree(localroot) if len(self.children(node)) == 1
         )
 
-    def filter(self, *, maxsize, localroot=None):
+    def filter(self, *, maxsize=None, localroot=None):
         """Yield subtree nodes filtered by size."""
         # defaults:
         if localroot is None:
             localroot = self.root()
+        if maxsize is None:
+            maxsize = 0.2 * self.size(self.root())
         # The 'maxdeep' algorithm:
         if self.size(localroot) < maxsize:
             yield localroot
@@ -617,11 +619,13 @@ class HyperPeakTree(PeakTree):
             for b in self.R.leaf_nodes():
                 yield a, b
 
-    def filter(self, *, maxsize, localroot=None):
+    def filter(self, *, maxsize=None, localroot=None):
         """Yield grid nodes in given subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
+        if maxsize is None:
+            maxsize = 0.2 * max(self.L.size(self.L.root()), self.R.size(self.R.root()))
         ra, rb = localroot
         for a in self.L.filter(maxsize=maxsize, localroot=ra):
             for b in self.R.filter(maxsize=maxsize, localroot=rb):
