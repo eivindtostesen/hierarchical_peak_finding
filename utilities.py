@@ -2,11 +2,16 @@
 # -*- coding: utf-8 -*-
 """Python module containing tools and utilities.
 
+Requires Python 3.8+
+
 Created on Thu Dec  1 15:48:10 2022
 
 @author: Eivind Tostesen
 
 """
+
+
+from errors import PeakyBlunder
 
 
 # Classes:
@@ -26,8 +31,10 @@ class ChainedAttributes:
         if attrname is None:
             attrname = str.lower(type(self).__name__)
 
-        if hasattr(obj, attrname) or self.parentself is not None:
-            pass
+        if self.parentself is not None:
+            raise PeakyBlunder(f"Attributed as '{self.attrname}'. Call method 'delattr' to break.")
+        elif hasattr(obj, attrname):
+            raise PeakyBlunder(f"The {attrname=} already exists.")
 
         self.attrname = attrname
         setattr(obj, self.attrname, self)
