@@ -357,11 +357,13 @@ class PeakTree:
             node for node in self.subtree(localroot) if len(self.children(node)) == 1
         )
 
-    def filter(self, *, maxsize, localroot=None):
+    def filter(self, *, maxsize=None, localroot=None):
         """Yield subtree nodes filtered by size."""
         # defaults:
         if localroot is None:
             localroot = self.root()
+        if maxsize is None:
+            maxsize = 0.2 * self.size(self.root())
         # The 'maxdeep' algorithm:
         if self.size(localroot) < maxsize:
             yield localroot
@@ -374,6 +376,42 @@ class PeakTree:
                 climber = self.parent(climber)
                 for child in self.low(climber):
                     yield from self.filter(maxsize=maxsize, localroot=child)
+
+    def innermost(self, nodes, localroot=None):
+        """Yield innermost nodes of the given nodes."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        filter = list(nodes)
+        countdown = {n: len(self.children(n)) for n in self.subtree(localroot)}
+        # Recursive "bottom-up" search via parents:
+        def _yield_or_propagate(node):
+            if node in filter:
+                yield node
+            elif node != localroot:
+                parent = self.parent(node)
+                countdown[parent] -= 1
+                if countdown[parent] == 0:
+                    yield from _yield_or_propagate(parent)
+
+        for node in self.leaf_nodes(localroot):
+            yield from _yield_or_propagate(node)
+
+    def outermost(self, nodes, localroot=None):
+        """Yield outermost nodes of the given nodes."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        filter = list(nodes)
+        # Recursive "top-down" search via children:
+        def _yield_or_branch(node):
+            if node in filter:
+                yield node
+            elif self.has_children(node):
+                for child in self.children(node):
+                    yield from _yield_or_branch(child)
+
+        yield from _yield_or_branch(localroot)
 
     # Initialization algorithms:
 
@@ -581,11 +619,13 @@ class HyperPeakTree(PeakTree):
             for b in self.R.leaf_nodes():
                 yield a, b
 
-    def filter(self, *, maxsize, localroot=None):
+    def filter(self, *, maxsize=None, localroot=None):
         """Yield grid nodes in given subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
+        if maxsize is None:
+            maxsize = 0.2 * max(self.L.size(self.L.root()), self.R.size(self.R.root()))
         ra, rb = localroot
         for a in self.L.filter(maxsize=maxsize, localroot=ra):
             for b in self.R.filter(maxsize=maxsize, localroot=rb):
