@@ -31,25 +31,15 @@ class PeakTreePolars(ChainedAttributes):
         tree,
         attrname="polars",
         location={},
-        slices={},
-        flanks={},
         **kwargs,
     ):
         """Attach this polars-aware object to a PeakTree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
         self.location = location
-        self.slices = slices
-        self.flanks = flanks
         if self.location:
             self.start = lambda n: self.location[n][0]
             self.end = lambda n: self.location[n][1]
-        if self.slices:
-            self.label_slice = lambda n: self.slices[n][0]
-            self.value_slice = lambda n: self.slices[n][1]
-        if self.flanks:
-            self.left_flank = lambda n: self.flanks[n][0]
-            self.right_flank = lambda n: self.flanks[n][1]
         self.node = lambda n: n
         self.root = lambda n: self.rootself.root()
         self.high = (
@@ -92,7 +82,7 @@ class PeakTreePolars(ChainedAttributes):
         """Return dataframe with one row per PeakTree node."""
         if filter is _default:
             filter = iter(self.rootself)
-        nodes = pl.Series(filter)
+        nodes = list(iter(filter))
         return pl.DataFrame().hstack(
             [
                 self.series(name, nodes, definitions=definitions)
@@ -125,6 +115,12 @@ class PeakTreePolars(ChainedAttributes):
             )
             .sort("sorting_column", **kwargs)
             .select([pl.exclude("sorting_column")])
+        )
+
+    def sort_by_height_and_size(self, dataframe):
+        """Return dataframe sorted by height and size."""
+        return dataframe.pipe(self.sort, by="size", reverse=True).pipe(
+            self.sort, by="height", reverse=True
         )
 
     # Out-of-the-box dataframes:
@@ -163,30 +159,13 @@ class PeakTreePolars(ChainedAttributes):
 
     def numeric_properties(self):
         """Return dataframe with numeric (vertical) properties."""
-        if hasattr(self, "value_slice"):
-            columns = "node height size base_height value_slice"
-        else:
-            columns = "node height size base_height"
-        return (
-            self.dataframe(columns)
-            .pipe(self.sort, "size", reverse=True)
-            .pipe(self.sort, "height", reverse=True)
-        )
+        return self.dataframe("node height size base_height").pipe(self.sort_by_height_and_size)
 
     def location_properties(self):
         """Return dataframe with locational (horizontal) properties."""
-        df = self.dataframe(
+        return self.dataframe(
             "node location start end",
             definitions=dict(
                 location=lambda n: list(self.location[n]),
             ),
         )
-        if hasattr(self, "label_slice"):
-            df = df.pipe(
-                self.assign_columns,
-                columns="label_slice slice_length",
-                definitions=dict(
-                    slice_length=lambda n: len(self.slices[n][0]),
-                ),
-            )
-        return df
