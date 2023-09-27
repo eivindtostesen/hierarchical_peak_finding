@@ -9,6 +9,38 @@ Created on Thu Mar 30 16:31:00 2023
 """
 
 
+from itertools import pairwise
+
+
+# Functions:
+
+
+def peaks(values):
+    """Yield peak regions as (start, end, min, max) tuples."""
+    regions = []
+    for i, (y1, y2) in enumerate(pairwise(values)):
+        if i == 0:  # first data point:
+            regions.append([i, None, y1, y1])
+        if y2 > y1:  # if uphill:
+            for r in reversed(regions):
+                if r[3] >= y2:
+                    break
+                r[3] = y2  # update max value
+            regions.append([i + 1, None, y2, y2])
+        elif y2 == y1:
+            pass  # region already created
+        elif y2 < y1:  # if downhill:
+            while regions and y2 < regions[-1][2]:
+                popped = regions.pop()
+                popped[1] = i  # update end value
+                yield popped
+            if not (regions and y2 == regions[-1][2]):
+                regions.append([popped[0], None, y2, popped[3]])
+    for r in reversed(regions):
+        r[1] = i + 1  # use last i value
+        yield r
+
+
 # Classes:
 
 
