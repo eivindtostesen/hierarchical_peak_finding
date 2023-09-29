@@ -16,6 +16,9 @@ Created on Wed Mar 24 14:49:04 2021.
 """
 
 
+from operator import attrgetter
+
+
 # Iteration tools:
 
 
@@ -120,6 +123,32 @@ def flanks(start, end, labels, values):
     left_flank = (labels[i - 1], values[i - 1]) if i > 0 else None
     right_flank = (labels[j + 1], values[j + 1]) if j < len(labels) - 1 else None
     return left_flank, right_flank
+
+
+def tree_from_peak_objects(peaks, presorted=True):
+    """Return (parent, root, children, top) from peaks with attrs: start, end, min, max."""
+    parent = {}
+    children = {}
+    top = {}
+    in_spe = []
+    if not presorted:
+        peaks = list(peaks)
+        peaks.sort(key=attrgetter("min"), reverse=True)
+        peaks.sort(key=attrgetter("end"))
+    for p in peaks:
+        children[p] = []
+        while in_spe and p.start <= in_spe[-1].start:
+            c = in_spe.pop()
+            children[p].append(c)
+            parent[c] = p
+        children[p].sort(key=attrgetter('start'))
+        children[p].sort(key=attrgetter('max'), reverse=True)
+        children[p] = tuple(children[p])
+        top[p] = top[children[p][0]] if children[p] else p
+        in_spe.append(p)
+    root = in_spe.pop()
+    parent[root] = None
+    return parent, root, children, top
 
 
 # Classes:
