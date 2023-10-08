@@ -30,16 +30,23 @@ class PeakTreePandas(ChainedAttributes):
         self,
         tree,
         attrname="pandas",
-        location={},
+        X=None,
+        objecttype = (
+            "node root parent full top children high low"
+            "root_path top_path subtree high_descendants "
+            "low_descendants full_nodes leaf_nodes "
+            "branch_nodes linear_nodes").split(),
         **kwargs,
     ):
         """Attach this pandas-aware object to a PeakTree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
-        self.location = location
-        if self.location:
-            self.start = lambda n: self.location[n][0]
-            self.end = lambda n: self.location[n][1]
+        if X is None:
+            self.x_start = lambda n: n.start
+            self.x_end = lambda n: n.end
+        else:
+            self.x_start = lambda n: X[n.start]
+            self.x_end = lambda n: X[n.end]
         self.node = lambda n: n
         self.root = lambda n: self.rootself.root()
         self.high = (
@@ -60,6 +67,7 @@ class PeakTreePandas(ChainedAttributes):
                 name,
                 lambda node, attr=name: list(getattr(self.rootself, attr)(node)),
             )
+        self.objecttype = objecttype
         self.set_definitions(**kwargs)
 
     def set_definitions(self, **kwargs):
@@ -71,15 +79,14 @@ class PeakTreePandas(ChainedAttributes):
         """Return series with one row per PeakTree node."""
         if filter is _default:
             filter = self.rootself
-        return (
-            pd.Series(filter)
-            .map(
+        dtype="object" if name in self.objecttype else None
+        s = pd.Series(filter, dtype=dtype).map(
                 definitions[name] if name in definitions else getattr(self, name),
                 na_action="ignore",
-            )
-            .convert_dtypes()
-            .rename(name)
-        )
+            ).rename(name)
+        if name not in self.objecttype:
+            s.convert_dtypes()
+        return s
 
     def dataframe(self, columns="node", filter=_default, *, definitions={}):
         """Return dataframe with one row per PeakTree node."""
@@ -143,8 +150,8 @@ class PeakTreePandas(ChainedAttributes):
     def location_properties(self):
         """Return dataframe with locational (horizontal) properties."""
         return self.dataframe(
-            "node location start end",
+            "node location x_start x_end",
             definitions=dict(
-                location=lambda n: list(self.location[n]),
+                location=lambda n: f"{self.x_start(n)}..{self.x_end(n)}",
             ),
         )

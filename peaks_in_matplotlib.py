@@ -131,6 +131,8 @@ class PeakTreeMatPlotLib(ChainedAttributes):
         attrname="plot",
         ax=None,
         fig=None,
+        X=None,
+        Y=None,
         xlim=None,
         ylim=None,
         xy={},
@@ -144,6 +146,8 @@ class PeakTreeMatPlotLib(ChainedAttributes):
         self.setattr(obj=tree, attrname=attrname)
         self.ax = ax
         self.fig = fig
+        self.X = X
+        self.Y = Y
         self.xlim = xlim
         self.ylim = ylim
         self.xy = xy
@@ -155,19 +159,15 @@ class PeakTreeMatPlotLib(ChainedAttributes):
             n: len(list(self.rootself.root_path(n))) - 1 for n in self.rootself
         }
         if not xlim:
-            self.xlim = [min(self.rootself), max(self.rootself)]
+            self.xlim = (self.X[self.rootself.root().start], self.X[self.rootself.root().end])
         if not ylim:
-            self.ylim = [min(self.rootself._data.values()), max(self.rootself._data.values())]
+            self.ylim = (self.rootself.root().min, self.rootself.root().max)
         if not xy:
-            self.xy = {
-                n: (self.rootself.top(n), self.rootself.base_height(n))
-                for n in self.rootself
-            }
+            self.xy = {n: (self.X[n.argmax], n.min) for n in self.rootself}
+        if not xinterval:
+            self.xinterval = {n: (self.X[n.start], self.X[n.end]) for n in self.rootself}
         if not yinterval:
-            self.yinterval = {
-                n: (self.rootself.base_height(n), self.rootself.height(n))
-                for n in self.rootself
-            }
+            self.yinterval = {n: (n.min, n.max) for n in self.rootself}
         plt.style.use("seaborn")
 
     def new(self, figsize=(10.0, 4.0)):
