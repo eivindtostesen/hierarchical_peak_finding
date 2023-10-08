@@ -113,6 +113,21 @@ class PeakTree:
        Open access: https://doi.org/10.1186/1748-7188-3-10
     """
 
+    @classmethod
+    def from_label_value_pairs(cls, iterable):
+        """Build a Tree and compute its data attributes."""
+        dataset = list(iterable)
+        obj = cls.__new__(cls)
+        obj._data = dict(dataset)
+        # compute data attributes:
+        obj._find_parent_and_root()
+        obj._find_top_and_children()
+        obj._find_full()
+        obj.location = peak_locations(
+            [(x, obj.base_height(x)) for x in obj._data], dataset
+        )
+        return obj
+
     def __init__(self, data):
         """Build a PeakTree and compute its data attributes."""
         self._data = dict(data)

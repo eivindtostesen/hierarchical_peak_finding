@@ -80,6 +80,18 @@ class NumSlice(SliceStr):
         self.values = values
         return self
 
+    @classmethod
+    def from_start_stop(cls, start, stop, values):
+        self = super().__new__(cls, f"{start}:{stop}")
+        self.values = values
+        return self
+
+    @classmethod
+    def from_start_end(cls, start, end, values):
+        self = super().__new__(cls, f"{start}:{end + 1}")
+        self.values = values
+        return self
+
     def __getattr__(self, name):
         """Get attribute."""
         if name == "max":
