@@ -18,6 +18,7 @@ Created on Wed Mar 24 14:49:04 2021.
 
 from utilities import pairwise
 from utilities import forward_backward
+from operator import attrgetter
 
 
 # Functions:
@@ -83,6 +84,32 @@ def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
     enddict = _trace(curvepoints, revpeaks)
     # return location intervals:
     return {x: (startdict[x], enddict[x]) for x in enddict}
+
+
+def tree_from_peak_objects(peaks, presorted=True):
+    """Return (parent, root, children, top) from peaks with attrs: start, end, min, max."""
+    parent = {}
+    children = {}
+    top = {}
+    in_spe = []
+    if not presorted:
+        peaks = list(peaks)
+        peaks.sort(key=attrgetter("min"), reverse=True)
+        peaks.sort(key=attrgetter("end"))
+    for p in peaks:
+        children[p] = []
+        while in_spe and p.start <= in_spe[-1].start:
+            c = in_spe.pop()
+            children[p].append(c)
+            parent[c] = p
+        children[p].sort(key=attrgetter('start'))
+        children[p].sort(key=attrgetter('max'), reverse=True)
+        children[p] = tuple(children[p])
+        top[p] = top[children[p][0]] if children[p] else p
+        in_spe.append(p)
+    root = in_spe.pop()
+    parent[root] = None
+    return parent, root, children, top
 
 
 # Classes:
