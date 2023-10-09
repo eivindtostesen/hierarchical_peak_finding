@@ -30,26 +30,23 @@ class PeakTreePolars(ChainedAttributes):
         self,
         tree,
         attrname="polars",
-        location={},
-        slices={},
-        flanks={},
+        X=None,
+        objecttype = (
+            "node root parent full top children high low"
+            "root_path top_path subtree high_descendants "
+            "low_descendants full_nodes leaf_nodes "
+            "branch_nodes linear_nodes").split(),
         **kwargs,
     ):
         """Attach this polars-aware object to a PeakTree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
-        self.location = location
-        self.slices = slices
-        self.flanks = flanks
-        if self.location:
-            self.start = lambda n: self.location[n][0]
-            self.end = lambda n: self.location[n][1]
-        if self.slices:
-            self.label_slice = lambda n: self.slices[n][0]
-            self.value_slice = lambda n: self.slices[n][1]
-        if self.flanks:
-            self.left_flank = lambda n: self.flanks[n][0]
-            self.right_flank = lambda n: self.flanks[n][1]
+        if X is None:
+            self.x_start = lambda n: n.start
+            self.x_end = lambda n: n.end
+        else:
+            self.x_start = lambda n: X[n.start]
+            self.x_end = lambda n: X[n.end]
         self.node = lambda n: n
         self.root = lambda n: self.rootself.root()
         self.high = (
@@ -69,6 +66,7 @@ class PeakTreePolars(ChainedAttributes):
                 name,
                 lambda node, attr=name: list(getattr(self.rootself, attr)(node)),
             )
+        self.objecttype = objecttype
         self.set_definitions(**kwargs)
 
     def set_definitions(self, **kwargs):
@@ -80,19 +78,21 @@ class PeakTreePolars(ChainedAttributes):
         """Return series with one row per PeakTree node."""
         if filter is _default:
             filter = self.rootself
+        dtype=pl.Object if name in self.objecttype else None
         return pl.Series(
             name,
             map(
                 definitions[name] if name in definitions else getattr(self, name),
                 filter,
             ),
+            dtype=dtype
         )
 
     def dataframe(self, columns="node", filter=_default, *, definitions={}):
         """Return dataframe with one row per PeakTree node."""
         if filter is _default:
             filter = iter(self.rootself)
-        nodes = pl.Series(filter)
+        nodes = list(iter(filter))
         return pl.DataFrame().hstack(
             [
                 self.series(name, nodes, definitions=definitions)
@@ -125,6 +125,12 @@ class PeakTreePolars(ChainedAttributes):
             )
             .sort("sorting_column", **kwargs)
             .select([pl.exclude("sorting_column")])
+        )
+
+    def sort_by_height_and_size(self, dataframe):
+        """Return dataframe sorted by height and size."""
+        return dataframe.pipe(self.sort, by="size", reverse=True).pipe(
+            self.sort, by="height", reverse=True
         )
 
     # Out-of-the-box dataframes:
@@ -163,30 +169,13 @@ class PeakTreePolars(ChainedAttributes):
 
     def numeric_properties(self):
         """Return dataframe with numeric (vertical) properties."""
-        if hasattr(self, "value_slice"):
-            columns = "node height size base_height value_slice"
-        else:
-            columns = "node height size base_height"
-        return (
-            self.dataframe(columns)
-            .pipe(self.sort, "size", reverse=True)
-            .pipe(self.sort, "height", reverse=True)
-        )
+        return self.dataframe("node height size base_height").pipe(self.sort_by_height_and_size)
 
     def location_properties(self):
         """Return dataframe with locational (horizontal) properties."""
-        df = self.dataframe(
-            "node location start end",
+        return self.dataframe(
+            "node location x_start x_end",
             definitions=dict(
-                location=lambda n: list(self.location[n]),
+                location=lambda n: f"{self.x_start(n)}..{self.x_end(n)}",
             ),
         )
-        if hasattr(self, "label_slice"):
-            df = df.pipe(
-                self.assign_columns,
-                columns="label_slice slice_length",
-                definitions=dict(
-                    slice_length=lambda n: len(self.slices[n][0]),
-                ),
-            )
-        return df

@@ -131,43 +131,51 @@ class PeakTreeMatPlotLib(ChainedAttributes):
         attrname="plot",
         ax=None,
         fig=None,
+        X=None,
+        Y=None,
+        xlim=None,
+        ylim=None,
         xy={},
         xinterval={},
         yinterval={},
-        slices={},
+        slice_of_x={},
+        slice_of_y={},
     ):
         """Attach a plotting object to a PeakTree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
         self.ax = ax
         self.fig = fig
+        self.X = X
+        self.Y = Y
+        self.xlim = xlim
+        self.ylim = ylim
         self.xy = xy
         self.xinterval = xinterval
         self.yinterval = yinterval
-        self.slices = slices
+        self.slice_of_x = slice_of_x
+        self.slice_of_y = slice_of_y
         self.level = {
             n: len(list(self.rootself.root_path(n))) - 1 for n in self.rootself
         }
+        if not xlim:
+            self.xlim = (self.X[self.rootself.root().start], self.X[self.rootself.root().end])
+        if not ylim:
+            self.ylim = (self.rootself.root().min, self.rootself.root().max)
         if not xy:
-            self.xy = {
-                n: (self.rootself.top(n), self.rootself.base_height(n))
-                for n in self.rootself
-            }
+            self.xy = {n: (self.X[n.argmax], n.min) for n in self.rootself}
+        if not xinterval:
+            self.xinterval = {n: (self.X[n.start], self.X[n.end]) for n in self.rootself}
         if not yinterval:
-            self.yinterval = {
-                n: (self.rootself.base_height(n), self.rootself.height(n))
-                for n in self.rootself
-            }
+            self.yinterval = {n: (n.min, n.max) for n in self.rootself}
         plt.style.use("seaborn")
 
-    def new(self):
+    def new(self, figsize=(10.0, 4.0)):
         """Initialize new figure and axes."""
-        self.fig = plt.figure(figsize=(10.0, 4.0))
+        self.fig = plt.figure(figsize=figsize)
         self.ax = self.fig.add_axes([0.1, 0.1, 1, 1])
-        self.ax.set_xlim([min(self.rootself), max(self.rootself)])
-        self.ax.set_ylim(
-            [min(self.rootself._data.values()), max(self.rootself._data.values())]
-        )
+        self.ax.set_xlim(self.xlim)
+        self.ax.set_ylim(self.ylim)
         self.ax.set_xlabel("Label")
         self.ax.set_ylabel("Value")
         return self
@@ -212,7 +220,8 @@ class PeakTreeMatPlotLib(ChainedAttributes):
         for n in nodes:
             add_crown(
                 self.ax,
-                *self.slices[n],
+                self.slice_of_x[n],
+                self.slice_of_y[n],
                 self.yinterval[n][0],
                 **kwargs,
             )

@@ -16,34 +16,9 @@ Created on Wed Mar 24 14:49:04 2021.
 """
 
 
+from utilities import pairwise
+from utilities import forward_backward
 from operator import attrgetter
-
-
-# Iteration tools:
-
-
-def _forward_backward(iterable):
-    """Return pair of iterators: (forward, backward)."""
-    data = list(iterable)
-    return iter(data), reversed(data)
-
-
-def _pairwise(iterable):
-    """Yield nearest neighbor pairs."""
-    it = iter(iterable)
-    a = next(it)
-    for b in it:
-        yield a, b
-        a = b
-
-
-def _tripletwise(iterable):
-    """Yield nearest neighbor triplets."""
-    it = iter(iterable)
-    a, b = next(it), next(it)
-    for c in it:
-        yield a, b, c
-        a, b = b, c
 
 
 # Functions:
@@ -52,7 +27,7 @@ def _tripletwise(iterable):
 def filter_local_extrema(datapoints):
     """Let only maxima/minima pass from a stream of points."""
     previous = None
-    for (x1, e1), (x2, e2) in _pairwise(datapoints):
+    for (x1, e1), (x2, e2) in pairwise(datapoints):
         if e1 == e2:
             continue
         is_uphill = e2 > e1
@@ -83,9 +58,9 @@ def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
     """Return dict of (start, end)-locations for the input points."""
     # defaults:
     if revpeaks is None:
-        peakpoints, revpeaks = _forward_backward(peakpoints)
+        peakpoints, revpeaks = forward_backward(peakpoints)
     if revcurve is None:
-        curvepoints, revcurve = _forward_backward(curvepoints)
+        curvepoints, revcurve = forward_backward(curvepoints)
 
     def _trace(curve, peaks):
         # flow: input -> peaklist -> level -> outputdict
@@ -109,20 +84,6 @@ def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
     enddict = _trace(curvepoints, revpeaks)
     # return location intervals:
     return {x: (startdict[x], enddict[x]) for x in enddict}
-
-
-def slices(start, end, labels, values):
-    """Return tuple: label_slice, value_slice."""
-    i, j = labels.index(start), labels.index(end)
-    return labels[i : j + 1], values[i : j + 1]
-
-
-def flanks(start, end, labels, values):
-    """Return tuple: left_flank, right_flank."""
-    i, j = labels.index(start), labels.index(end)
-    left_flank = (labels[i - 1], values[i - 1]) if i > 0 else None
-    right_flank = (labels[j + 1], values[j + 1]) if j < len(labels) - 1 else None
-    return left_flank, right_flank
 
 
 def tree_from_peak_objects(peaks, presorted=True):
@@ -178,6 +139,21 @@ class PeakTree:
        Biology 3, 10 (2008).
        Open access: https://doi.org/10.1186/1748-7188-3-10
     """
+
+    @classmethod
+    def from_label_value_pairs(cls, iterable):
+        """Build a Tree and compute its data attributes."""
+        dataset = list(iterable)
+        obj = cls.__new__(cls)
+        obj._data = dict(dataset)
+        # compute data attributes:
+        obj._find_parent_and_root()
+        obj._find_top_and_children()
+        obj._find_full()
+        obj.location = peak_locations(
+            [(x, obj.base_height(x)) for x in obj._data], dataset
+        )
+        return obj
 
     def __init__(self, data):
         """Build a PeakTree and compute its data attributes."""
@@ -457,16 +433,16 @@ class PeakTree:
                 non_nodes.append(label)
                 if path:
                     path.append(in_spe[-1])
-                    for child, parent in _pairwise(path):
+                    for child, parent in pairwise(path):
                         self._parent[child] = parent
             else:
                 in_spe.append(label)
                 if path:
                     path.append(label)
-                    for child, parent in _pairwise(path):
+                    for child, parent in pairwise(path):
                         self._parent[child] = parent
         if len(in_spe) > 1:
-            for parent, child in _pairwise(in_spe):
+            for parent, child in pairwise(in_spe):
                 self._parent[child] = parent
         self._root = in_spe[0]
         self._parent[self._root] = None

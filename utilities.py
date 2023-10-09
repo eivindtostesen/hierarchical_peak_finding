@@ -14,6 +14,33 @@ Created on Thu Dec  1 15:48:10 2022
 from errors import PeakyBlunder
 
 
+# Iteration tools:
+
+
+def forward_backward(iterable):
+    """Return pair of iterators: (forward, backward)."""
+    data = list(iterable)
+    return iter(data), reversed(data)
+
+
+def pairwise(iterable):
+    """Yield nearest neighbor pairs."""
+    it = iter(iterable)
+    a = next(it)
+    for b in it:
+        yield a, b
+        a = b
+
+
+def tripletwise(iterable):
+    """Yield nearest neighbor triplets."""
+    it = iter(iterable)
+    a, b = next(it), next(it)
+    for c in it:
+        yield a, b, c
+        a, b = b, c
+
+
 # Classes:
 
 
