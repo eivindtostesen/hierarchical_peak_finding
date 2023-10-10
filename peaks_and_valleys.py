@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Python module defining peaks and valleys as slices.
+"""Python module for peaks and valleys in a numeric sequence.
 
 Created on Thu Mar 30 16:31:00 2023
 
@@ -9,7 +9,7 @@ Created on Thu Mar 30 16:31:00 2023
 """
 
 
-from itertools import pairwise
+from utilities import pairwise
 
 
 # Functions:
@@ -33,12 +33,12 @@ def peaks(values):
             while regions and y2 < regions[-1][2]:
                 popped = regions.pop()
                 popped[1] = i  # update end value
-                yield popped
+                yield tuple(popped)
             if not (regions and y2 == regions[-1][2]):
                 regions.append([popped[0], None, y2, popped[3]])
     for r in reversed(regions):
         r[1] = i + 1  # use last i value
-        yield r
+        yield tuple(r)
 
 
 # Classes:
@@ -121,6 +121,12 @@ class NumSlice(SliceStr):
     @classmethod
     def from_start_end(cls, start, end, values):
         self = super().__new__(cls, f"{start}:{end + 1}")
+        self.values = values
+        return self
+
+    @classmethod
+    def from_peaktuple(cls, peaktuple, values):
+        self = super().__new__(cls, f"{peaktuple[0]}:{peaktuple[1] + 1}")
         self.values = values
         return self
 
