@@ -124,12 +124,6 @@ class NumSlice(SliceStr):
         self.values = values
         return self
 
-    @classmethod
-    def from_peaktuple(cls, peaktuple, values):
-        self = super().__new__(cls, f"{peaktuple[0]}:{peaktuple[1] + 1}")
-        self.values = values
-        return self
-
     def __getattr__(self, name):
         """Get attribute."""
         if name == "max":

@@ -129,8 +129,8 @@ class PeakTreePolars(ChainedAttributes):
 
     def sort_by_height_and_size(self, dataframe):
         """Return dataframe sorted by height and size."""
-        return dataframe.pipe(self.sort, by="size", reverse=True).pipe(
-            self.sort, by="height", reverse=True
+        return dataframe.pipe(self.sort, by="size", descending=True).pipe(
+            self.sort, by="height", descending=True
         )
 
     # Out-of-the-box dataframes:

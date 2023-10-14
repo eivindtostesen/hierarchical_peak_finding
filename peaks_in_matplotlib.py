@@ -17,7 +17,7 @@ from utilities import ChainedAttributes
 
 
 def add_L_arrow(
-    axes, tail_x, tail_y, head_x, head_y, *, color="C2", linewidth=1, **kwargs
+    axes, tail_x, tail_y, head_x, head_y, *, color="C5", linewidth=1, **kwargs
 ):
     """Plot an L-shaped arrow to indicate branch in PeakTree."""
     axes.add_patch(
@@ -47,7 +47,7 @@ def add_L_arrow(
 
 
 def add_bounding_box(
-    ax, x1, x2, y1, y2, *, edgecolor="C2", fill=False, linewidth=3, **kwargs
+    ax, x1, x2, y1, y2, *, edgecolor="C4", fill=False, linewidth=3, **kwargs
 ):
     """Plot bounding box around a peak."""
     ax.add_patch(
@@ -72,7 +72,7 @@ def add_pedestal(
     y1=0,
     fill=True,
     linewidth=1,
-    edgecolor="C2",
+    edgecolor="C4",
     facecolor="gold",
     alpha=0.6,
     **kwargs
@@ -105,7 +105,7 @@ def add_crown(ax, xslice, yslice, y1, *, facecolor="gold", alpha=0.9, **kwargs):
     )
 
 
-def add_bar(axes, x1, x2, y1, *, height=0.5, color="C3", fill=True, **kwargs):
+def add_bar(axes, x1, x2, y1, *, height=0.5, color="C7", fill=True, **kwargs):
     """Plot a bar to indicate peak location."""
     axes.add_patch(
         matplotlib.patches.Rectangle(
@@ -168,7 +168,7 @@ class PeakTreeMatPlotLib(ChainedAttributes):
             self.xinterval = {n: (self.X[n.start], self.X[n.end]) for n in self.rootself}
         if not yinterval:
             self.yinterval = {n: (n.min, n.max) for n in self.rootself}
-        plt.style.use("seaborn")
+        plt.style.use("fast")
 
     def new(self, figsize=(10.0, 4.0)):
         """Initialize new figure and axes."""
@@ -240,7 +240,7 @@ class PeakTreeMatPlotLib(ChainedAttributes):
                 self.ax,
                 *self.xinterval[n],
                 self.level[n],
-                height=0.9,
+                height=0.8,
                 **kwargs,
             )
         return self
