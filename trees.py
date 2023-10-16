@@ -3,9 +3,9 @@
 """Python module for trees of peaks in numeric data.
 
 This module contains algorithms for building trees
-representing the hierarchical structure of peaks and subpeaks
+representing the hierarchical nesting of peak and subpeak regions
 in one-dimensional or higher-dimensional data.
-It also contains methods for searching the tree and selecting peaks.
+It also contains methods for searching trees and selecting peaks.
 
 Requires Python 3.7+
 
@@ -23,7 +23,7 @@ from operator import attrgetter
 
 
 def tree_from_peak_objects(peaks, presorted=True):
-    """Return (parent, root, children, top) from peaks with attrs: start, end, min, max."""
+    """Return (parent, root, children, top) from peaks having attrs: start, end, min, max."""
     parent = {}
     children = {}
     top = {}
@@ -55,14 +55,13 @@ def tree_from_peak_objects(peaks, presorted=True):
 class PeakTree:
     """Tree of peaks in univariate data.
 
-    A PeakTree represents the hierarchical structure of
-    peaks and subpeaks in data such as a sequence of numbers,
+    A PeakTree represents the hierarchical nesting of
+    peak and subpeak regions in 1D data such as a sequence of numbers,
     a time series, a function y(x) or other univariate data.
 
-    A PeakTree is initialized with an iterable of
-    (label, value) pairs. The values must be numeric and
-    the labels must be unique hashable objects
-    to be used as dictionary keys.
+    A PeakTree is initialized with an iterable of peak objects
+    that have attributes start, end, min, max. The peak objects
+    must be unique hashable objects to be used as dictionary keys.
 
     Notes
     -----
@@ -79,14 +78,14 @@ class PeakTree:
 
     @classmethod
     def from_peak_objects(cls, peaks, presorted=True):
-        """Build a Tree and compute its data attributes."""
+        """Build a PeakTree and compute its data attributes."""
         obj = cls.__new__(cls)
         obj._parent, obj._root, obj._children, obj._top = tree_from_peak_objects(peaks, presorted=presorted)
         obj._find_full()
         return obj
 
     def __init__(self, data):
-        pass
+        pass  # TODO
 
     def __contains__(self, node):
         """Return True if the input is a node in the PeakTree."""
@@ -135,7 +134,7 @@ class PeakTree:
         }
 
     def set_nodes(self, changes={}):
-        """Replace tree nodes by using given mapping."""
+        """Replace PeakTree nodes by using given mapping."""
 
         def new(node):
             return changes[node] if node in changes else node
@@ -358,7 +357,7 @@ class PeakTree:
 class HyperPeakTree(PeakTree):
     """Tree of higher-dimensional peaks.
 
-    A HyperPeakTree represents the hierarchical structure of peaks
+    A HyperPeakTree represents the hierarchical nesting of peaks
     and subpeaks in more dimensions, such as a mountain landscape
     with height z as a function of x and y.
 

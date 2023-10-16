@@ -45,6 +45,7 @@ def peaks(values):
 
 
 class SliceStr(str):
+    """String representing a slice object."""
 
     sep = ":"  # slice notation
 
@@ -106,6 +107,8 @@ class SliceStr(str):
 
 
 class NumSlice(SliceStr):
+    """String representing a slice of a numeric sequence."""
+
     def __new__(cls, slicestr, values):
         """Create slice string with a reference to a numeric sequence."""
         self = super().__new__(cls, slicestr)
@@ -114,12 +117,14 @@ class NumSlice(SliceStr):
 
     @classmethod
     def from_start_stop(cls, start, stop, values):
+        """Return NumSlice from start, stop integers and the sequence."""
         self = super().__new__(cls, f"{start}:{stop}")
         self.values = values
         return self
 
     @classmethod
     def from_start_end(cls, start, end, values):
+        """Return NumSlice from start, end integers and the sequence."""
         self = super().__new__(cls, f"{start}:{end + 1}")
         self.values = values
         return self

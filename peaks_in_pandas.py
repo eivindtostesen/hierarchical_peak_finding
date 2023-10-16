@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 """Python module for using pandas in peak analysis.
 
-Tested with Pandas version 1.4.4
-
 Created on Sat Jan  7 16:29:38 2023
 
 @author: Eivind Tostesen

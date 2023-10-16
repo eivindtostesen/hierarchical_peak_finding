@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 """Python module for using polars in peak analysis.
 
-Tested with Polars version 0.15.14
-
 Created on Sat Jan  7 16:30:46 2023
 
 @author: Eivind Tostesen
