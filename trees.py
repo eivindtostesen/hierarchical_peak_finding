@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Python module for finding peaks in numeric data.
+"""Python module for trees of peaks in numeric data.
 
 This module contains algorithms for building trees
-representing the hierarchical structure of peaks and subpeaks
+representing the hierarchical nesting of peak and subpeak regions
 in one-dimensional or higher-dimensional data.
-It also contains methods for searching the tree and selecting peaks.
+It also contains methods for searching trees and selecting peaks.
 
 Requires Python 3.7+
 
@@ -16,84 +16,21 @@ Created on Wed Mar 24 14:49:04 2021.
 """
 
 
-from utilities import pairwise
-from utilities import forward_backward
 from operator import attrgetter
 
 
 # Functions:
 
 
-def filter_local_extrema(datapoints):
-    """Let only maxima/minima pass from a stream of points."""
-    previous = None
-    for (x1, e1), (x2, e2) in pairwise(datapoints):
-        if e1 == e2:
-            continue
-        is_uphill = e2 > e1
-        if is_uphill == previous:
-            continue
-        yield x1, e1
-        previous = is_uphill
-    else:
-        yield x2, e2
-
-
-def nonlinear_peaktree(datapoints):
-    """Return PeakTree without linear nodes."""
-    data = dict(filter_local_extrema(datapoints))
-    nodes = list(data)
-    # cut possible minimum at the beginning:
-    if data[nodes[0]] < data[nodes[1]]:
-        del data[nodes[0]]
-        del nodes[0]
-    # cut possible minimum at the end:
-    if data[nodes[-1]] < data[nodes[-2]]:
-        del data[nodes[-1]]
-        del nodes[-1]
-    return PeakTree(data)
-
-
-def peak_locations(peakpoints, curvepoints, revpeaks=None, revcurve=None):
-    """Return dict of (start, end)-locations for the input points."""
-    # defaults:
-    if revpeaks is None:
-        peakpoints, revpeaks = forward_backward(peakpoints)
-    if revcurve is None:
-        curvepoints, revcurve = forward_backward(curvepoints)
-
-    def _trace(curve, peaks):
-        # flow: input -> peaklist -> level -> outputdict
-        peaklist = list(peaks)
-        level = {}
-        outputdict = {}
-        previousx = None
-        for x, e in curve:
-            for p in [p for p in level if level[p] > e]:
-                outputdict[p] = previousx
-                del level[p]
-            if peaklist and peaklist[-1][0] == x:
-                level.update([peaklist.pop()])
-            previousx = x
-        for p in level:
-            outputdict[p] = previousx
-        return outputdict
-
-    # compute starts and ends:
-    startdict = _trace(revcurve, peakpoints)
-    enddict = _trace(curvepoints, revpeaks)
-    # return location intervals:
-    return {x: (startdict[x], enddict[x]) for x in enddict}
-
-
 def tree_from_peak_objects(peaks, presorted=True):
-    """Return (parent, root, children, top) from peaks with attrs: start, end, min, max."""
+    """Return (parent, root, children, top) from peaks having attrs: start, end, min, max."""
     parent = {}
     children = {}
     top = {}
     in_spe = []
     if not presorted:
         peaks = list(peaks)
+        # Order same as given by 'peaks' function:
         peaks.sort(key=attrgetter("min"), reverse=True)
         peaks.sort(key=attrgetter("end"))
     for p in peaks:
@@ -118,14 +55,13 @@ def tree_from_peak_objects(peaks, presorted=True):
 class PeakTree:
     """Tree of peaks in univariate data.
 
-    A PeakTree represents the hierarchical structure of
-    peaks and subpeaks in data such as a sequence of numbers,
+    A PeakTree represents the hierarchical nesting of
+    peak and subpeak regions in 1D data such as a sequence of numbers,
     a time series, a function y(x) or other univariate data.
 
-    A PeakTree is initialized with an iterable of
-    (label, value) pairs. The values must be numeric and
-    the labels must be unique hashable objects
-    to be used as dictionary keys.
+    A PeakTree is initialized with an iterable of peak objects
+    that have attributes start, end, min, max. The peak objects
+    must be unique hashable objects to be used as dictionary keys.
 
     Notes
     -----
@@ -141,39 +77,27 @@ class PeakTree:
     """
 
     @classmethod
-    def from_label_value_pairs(cls, iterable):
-        """Build a Tree and compute its data attributes."""
-        dataset = list(iterable)
+    def from_peak_objects(cls, peaks, presorted=True):
+        """Build a PeakTree and compute its data attributes."""
         obj = cls.__new__(cls)
-        obj._data = dict(dataset)
-        # compute data attributes:
-        obj._find_parent_and_root()
-        obj._find_top_and_children()
+        obj._parent, obj._root, obj._children, obj._top = tree_from_peak_objects(peaks, presorted=presorted)
         obj._find_full()
-        obj.location = peak_locations(
-            [(x, obj.base_height(x)) for x in obj._data], dataset
-        )
         return obj
 
     def __init__(self, data):
-        """Build a PeakTree and compute its data attributes."""
-        self._data = dict(data)
-        # compute data attributes:
-        self._find_parent_and_root()
-        self._find_top_and_children()
-        self._find_full()
+        pass  # TODO
 
     def __contains__(self, node):
         """Return True if the input is a node in the PeakTree."""
-        return node in self._data
+        return node in self._full
 
     def __iter__(self):
         """Iterate over nodes in the PeakTree."""
-        return iter(self._data)
+        return iter(self._full)
 
     def __len__(self):
         """Return number of nodes in the PeakTree."""
-        return len(self._data)
+        return len(self._full)
 
     def __matmul__(self, other):
         """Return product with other tree (PeakTree or HyperPeakTree)."""
@@ -202,7 +126,6 @@ class PeakTree:
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
         return {
-            "_data": self._data,
             "_parent": self._parent,
             "_children": self._children,
             "_top": self._top,
@@ -211,12 +134,11 @@ class PeakTree:
         }
 
     def set_nodes(self, changes={}):
-        """Replace tree nodes by using given mapping."""
+        """Replace PeakTree nodes by using given mapping."""
 
         def new(node):
             return changes[node] if node in changes else node
 
-        self._data = dict((new(x), y) for (x, y) in self._data.items())
         self._top = dict((new(x), new(y)) for (x, y) in self._top.items())
         self._full = dict((new(x), new(y)) for (x, y) in self._full.items())
         self._parent = dict((new(x), new(y)) for (x, y) in self._parent.items())
@@ -244,15 +166,15 @@ class PeakTree:
 
     def height(self, node):
         """Return the height at the top of the input peak."""
-        return self._data[self.top(node)]
+        return node.max
 
     def base_height(self, node):
         """Return the height at the base of the input peak."""
-        return self._data[node]
+        return node.min
 
     def size(self, node):
         """Return vertical distance between top and base."""
-        return abs(self.height(node) - self.base_height(node))
+        return node.size
 
     def parent(self, node):
         """Return the input peak merged with its neighboring peak."""
@@ -277,7 +199,7 @@ class PeakTree:
     def _index(self, node):
         """Return the zero-based index of the input node."""
         # accessing the preserved insertion order:
-        return list(self._data).index(node)
+        return list(self._full).index(node)
 
     # public recursive algorithms:
 
@@ -420,61 +342,6 @@ class PeakTree:
 
     # Initialization algorithms:
 
-    def _find_parent_and_root(self):
-        """Compute attributes: self._parent and self._root."""
-        self._parent = {}
-        in_spe = []
-        non_nodes = []
-        for label in self:
-            path = []
-            while in_spe and self._data[in_spe[-1]] > self._data[label]:
-                path.append(in_spe.pop())
-            if in_spe and self._data[in_spe[-1]] == self._data[label]:
-                non_nodes.append(label)
-                if path:
-                    path.append(in_spe[-1])
-                    for child, parent in pairwise(path):
-                        self._parent[child] = parent
-            else:
-                in_spe.append(label)
-                if path:
-                    path.append(label)
-                    for child, parent in pairwise(path):
-                        self._parent[child] = parent
-        if len(in_spe) > 1:
-            for parent, child in pairwise(in_spe):
-                self._parent[child] = parent
-        self._root = in_spe[0]
-        self._parent[self._root] = None
-        for label in non_nodes:
-            del self._data[label]
-
-    def _find_top_and_children(self):
-        """Compute attributes: self._top and self._children."""
-        self._children = {}
-        children = {p: [] for p in self._parent.values()}
-        for c, p in self._parent.items():
-            children[p].append(c)
-        countdown = {p: len(children[p]) for p in self._parent.values()}
-
-        def _propagate_top(node):
-            parent = self.parent(node)
-            countdown[parent] -= 1
-            if countdown[parent] == 0:
-                children[parent].sort(key=self._index)
-                children[parent].sort(key=self.height, reverse=True)
-                self._children[parent] = tuple(children[parent])
-                self._top[parent] = self._top[self._children[parent][0]]
-                if self.is_nonroot(parent):
-                    _propagate_top(parent)
-
-        leafnodes = [n for n in self if n not in self._parent.values()]
-        self._top = {node: node for node in leafnodes}
-        for node in leafnodes:
-            _propagate_top(node)
-        for node in leafnodes:
-            self._children[node] = ()
-
     def _find_full(self):
         """Compute attribute: self._full."""
 
@@ -490,7 +357,7 @@ class PeakTree:
 class HyperPeakTree(PeakTree):
     """Tree of higher-dimensional peaks.
 
-    A HyperPeakTree represents the hierarchical structure of peaks
+    A HyperPeakTree represents the hierarchical nesting of peaks
     and subpeaks in more dimensions, such as a mountain landscape
     with height z as a function of x and y.
 
@@ -636,6 +503,10 @@ class HyperPeakTree(PeakTree):
             for b in self.R.filter(maxsize=maxsize, localroot=rb):
                 yield a, b
 
+    def from_peak_objects(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+    
     def as_dict_of_dicts(self):
         """Return that it is NotImplemented."""
         return NotImplemented
@@ -650,14 +521,6 @@ class HyperPeakTree(PeakTree):
 
     def base_height(self, node):
         """Return that base_height is NotImplemented."""
-        return NotImplemented
-
-    def _find_parent_and_root(self):
-        """Return that it is NotImplemented."""
-        return NotImplemented
-
-    def _find_top_and_children(self):
-        """Return that it is NotImplemented."""
         return NotImplemented
 
     def _find_full(self):

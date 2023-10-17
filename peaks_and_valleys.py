@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Python module defining peaks and valleys as slices.
+"""Python module for peaks and valleys in a numeric sequence.
 
 Created on Thu Mar 30 16:31:00 2023
 
@@ -9,10 +9,43 @@ Created on Thu Mar 30 16:31:00 2023
 """
 
 
+from utilities import pairwise
+
+
+# Functions:
+
+
+def peaks(values):
+    """Yield peak regions as (start, end, min, max) tuples."""
+    regions = []
+    for i, (y1, y2) in enumerate(pairwise(values)):
+        if i == 0:  # first data point:
+            regions.append([i, None, y1, y1])
+        if y2 > y1:  # if uphill:
+            for r in reversed(regions):
+                if r[3] >= y2:
+                    break
+                r[3] = y2  # update max value
+            regions.append([i + 1, None, y2, y2])
+        elif y2 == y1:
+            pass  # region already created
+        elif y2 < y1:  # if downhill:
+            while regions and y2 < regions[-1][2]:
+                popped = regions.pop()
+                popped[1] = i  # update end value
+                yield tuple(popped)
+            if not (regions and y2 == regions[-1][2]):
+                regions.append([popped[0], None, y2, popped[3]])
+    for r in reversed(regions):
+        r[1] = i + 1  # use last i value
+        yield tuple(r)
+
+
 # Classes:
 
 
 class SliceStr(str):
+    """String representing a slice object."""
 
     sep = ":"  # slice notation
 
@@ -74,9 +107,25 @@ class SliceStr(str):
 
 
 class NumSlice(SliceStr):
+    """String representing a slice of a numeric sequence."""
+
     def __new__(cls, slicestr, values):
         """Create slice string with a reference to a numeric sequence."""
         self = super().__new__(cls, slicestr)
+        self.values = values
+        return self
+
+    @classmethod
+    def from_start_stop(cls, start, stop, values):
+        """Return NumSlice from start, stop integers and the sequence."""
+        self = super().__new__(cls, f"{start}:{stop}")
+        self.values = values
+        return self
+
+    @classmethod
+    def from_start_end(cls, start, end, values):
+        """Return NumSlice from start, end integers and the sequence."""
+        self = super().__new__(cls, f"{start}:{end + 1}")
         self.values = values
         return self
 

@@ -10,7 +10,9 @@ Created on Mon Oct 11 09:34:12 2021
 """
 
 import random
+import string
 from itertools import accumulate, chain
+from errors import PeakyBlunder
 
 
 # Random walks:
@@ -57,9 +59,11 @@ def randomwalk(
     return list(accumulate(steps, initial=start))
 
 
-def example_1(length=45, *, randomseed="it's....."):
+def example_1(length=52, *, randomseed="it's....."):
     """Return mini example data set as two lists X, Y."""
-    return list(range(length)), randomwalk(
+    if length > 52:
+        raise PeakyBlunder(f"Maximum length is 52.")
+    return list(string.ascii_letters)[0:length], randomwalk(
         start=5.0,
         steps=discrete_steps(
             length=length - 1,
