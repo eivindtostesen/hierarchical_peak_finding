@@ -41,6 +41,21 @@ def tripletwise(iterable):
         a, b = b, c
 
 
+def filter_local_extrema(datapoints):
+    """Let only maxima/minima pass from a stream of points."""
+    previous = None
+    for (x1, e1), (x2, e2) in pairwise(datapoints):
+        if e1 == e2:
+            continue
+        is_uphill = e2 > e1
+        if is_uphill == previous:
+            continue
+        yield x1, e1
+        previous = is_uphill
+    else:
+        yield x2, e2
+
+
 # Classes:
 
 

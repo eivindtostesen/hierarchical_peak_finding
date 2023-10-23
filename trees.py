@@ -147,6 +147,12 @@ class PeakTree:
         )
         self._root = new(self._root)
         return None
+    
+    def levels(self):
+        """Return dict of node:level pairs (root is zero level)."""
+        return {
+            n: len(list(self.root_path(n))) - 1 for n in self
+        }
 
     def root(self):
         """Return the root node of the PeakTree."""
