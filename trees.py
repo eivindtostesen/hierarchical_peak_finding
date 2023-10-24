@@ -108,22 +108,6 @@ class PeakTree:
         indent = "| "
         return "\n".join([level * indent + str(node) for node, level in self.levels().items()])
 
-    def as_string(self, localroot):
-        """Return printable subtree structure."""
-        str = "# Notation: <high> /& <low>/ => <parent>\n"
-        for full in self.full_nodes(localroot):
-            if not self.has_children(full):
-                continue
-            for node in self.path(self.top(full), self.high(full), self.parent):
-                str += f"{node}"
-                if len(self.children(self.parent(node))) == 2:
-                    str += f" /& {self.low(self.parent(node))[0]}/"
-                if len(self.children(self.parent(node))) > 2:
-                    str += f" /& {self.low(self.parent(node))}/"
-                str += " => "
-            str += f"{full}.\n"
-        return str
-
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
         return {
