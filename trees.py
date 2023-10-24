@@ -105,7 +105,8 @@ class PeakTree:
 
     def __str__(self):
         """Return printable tree structure."""
-        return self.as_string(self.root())
+        indent = "| "
+        return "\n".join([level * indent + str(node) for node, level in self.levels().items()])
 
     def as_string(self, localroot):
         """Return printable subtree structure."""
@@ -149,10 +150,14 @@ class PeakTree:
         return None
     
     def levels(self):
-        """Return dict of node:level pairs (root is zero level)."""
-        return {
-            n: len(list(self.root_path(n))) - 1 for n in self
-        }
+        """Return ordered dict of node:level pairs (root is zero level)."""
+        levels = {}
+        for node in self.subtree():
+            if self.is_nonroot(node):
+                levels[node] = 1 + levels[self.parent(node)]
+            else:
+                levels[node] = 0
+        return levels
 
     def root(self):
         """Return the root node of the PeakTree."""
@@ -231,8 +236,8 @@ class PeakTree:
         if localroot is None:
             localroot = self.root()
         yield localroot
-        yield from self.high_descendants(localroot)
-        yield from self.low_descendants(localroot)
+        for child in self.children(localroot):
+            yield from self.subtree(child)
 
     def high_descendants(self, localroot=None):
         """Yield high children in the input node's subtree."""
