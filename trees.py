@@ -17,6 +17,7 @@ Created on Wed Mar 24 14:49:04 2021.
 
 
 from operator import attrgetter
+from utilities import pairwise
 
 
 # Functions:
@@ -78,10 +79,44 @@ class PeakTree:
 
     @classmethod
     def from_peak_objects(cls, peaks, presorted=True):
-        """Build a PeakTree and compute its data attributes."""
+        """Return new PeakTree from iterable of peak objects."""
         obj = cls.__new__(cls)
         obj._parent, obj._root, obj._children, obj._top = tree_from_peak_objects(peaks, presorted=presorted)
         obj._find_full()
+        return obj
+
+    @classmethod
+    def from_levels(cls, levels):
+        """Return new PeakTree from other tree's levels() output."""
+        obj = cls.__new__(cls)
+        obj._parent = {}
+        children = {}
+        obj._top = {}
+        obj._full = {}
+        stack = []
+        for (A, a), (B, b) in pairwise(levels.items()):
+            if a == 0: # the iteration start
+                obj._parent[A] = None
+                obj._full[A] = A
+                obj._root = A
+                stack = [A]
+            if b == a + 1: # a subtree grows
+                obj._parent[B] = A
+                obj._full[B] = obj._full[A]
+                children[A] = [B] # a high child
+            elif a >= b : # a subtree finishes
+                obj._parent[B] = stack[b - 1]
+                obj._full[B] = B
+                children[A] = []
+                children[stack[b - 1]].append(B) # a low child
+                for node in obj.path(A, obj._full[A], obj.parent):
+                    obj._top[node] = A
+            if b == len(stack):
+                stack.append(B)
+            else:
+                stack[b] = B
+        children[B] = [] # the last B
+        obj._children = {p: tuple(c) for p, c in children.items()}
         return obj
 
     def __init__(self, data):
@@ -499,6 +534,10 @@ class HyperPeakTree(PeakTree):
                 yield a, b
 
     def from_peak_objects(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+    
+    def from_levels(self):
         """Return that it is NotImplemented."""
         return NotImplemented
     
