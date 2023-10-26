@@ -88,34 +88,34 @@ class PeakTree:
     @classmethod
     def from_levels(cls, levels):
         """Return new PeakTree from other tree's levels() output."""
+
+        def leaf_and_top(node):
+            children[node] = []
+            for n in obj.path(node, obj._full[node], obj.parent):
+                obj._top[n] = node
+
         obj = cls.__new__(cls)
         obj._parent = {}
         children = {}
         obj._top = {}
         obj._full = {}
-        stack = []
         for (A, a), (B, b) in pairwise(levels.items()):
-            if a == 0: # the iteration start
+            if a == 0:  # first item is the root:
                 obj._parent[A] = None
                 obj._full[A] = A
                 obj._root = A
                 stack = [A]
-            if b == a + 1: # a subtree grows
-                obj._parent[B] = A
+            if b == a + 1:  # a subtree grows:
                 obj._full[B] = obj._full[A]
-                children[A] = [B] # a high child
-            elif a >= b : # a subtree finishes
-                obj._parent[B] = stack[b - 1]
+                children[stack[-1]] = [B]  # B is the high child (of A)
+            else:  # (then a >= b) a subtree finishes:
+                del stack[b:]  # pop a slice
                 obj._full[B] = B
-                children[A] = []
-                children[stack[b - 1]].append(B) # a low child
-                for node in obj.path(A, obj._full[A], obj.parent):
-                    obj._top[node] = A
-            if b == len(stack):
-                stack.append(B)
-            else:
-                stack[b] = B
-        children[B] = [] # the last B
+                children[stack[-1]].append(B)  # B is a low child
+                leaf_and_top(A)  # A is a leaf and top
+            obj._parent[B] = stack[-1]
+            stack.append(B)
+        leaf_and_top(B)  # the last B is a leaf and top
         obj._children = {p: tuple(c) for p, c in children.items()}
         return obj
 
