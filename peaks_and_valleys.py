@@ -168,8 +168,8 @@ class NumSlice(SliceStr):
         ]
 
     def __repr__(self) -> str:
-        """Return "start:stop" - string."""
-        return str(self)
+        """Return string that can reconstruct the object."""
+        return f'NumSlice("{self}", Y)'
 
     def pre(self):
         """Return index of left neighbor if exists else None."""

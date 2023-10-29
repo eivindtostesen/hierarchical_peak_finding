@@ -138,8 +138,12 @@ class PeakTree:
         """Return product with other tree (PeakTree or HyperPeakTree)."""
         return HyperPeakTree(self, other)
 
+    def __repr__(self) -> str:
+        """Return string that can reconstruct the PeakTree."""
+        return f"PeakTree.from_levels({repr(self.levels())})"
+
     def __str__(self):
-        """Return printable tree structure."""
+        """Return string with tree in indented list notation."""
         indent = "| "
         return "\n".join([level * indent + str(node) for node, level in self.levels().items()])
 
@@ -432,6 +436,10 @@ class HyperPeakTree(PeakTree):
     def __len__(self):
         """Return number of nodes in the HyperPeakTree."""
         return len(list(self.__iter__()))
+
+    def __repr__(self) -> str:
+        """Return string that can reconstruct the HyperPeakTree."""
+        return f"HyperPeakTree({repr(self.L)}, {repr(self.R)})"
 
     def root(self):
         """Return the root node of the HyperPeakTree."""
