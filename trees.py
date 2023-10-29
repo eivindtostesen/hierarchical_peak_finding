@@ -17,6 +17,7 @@ Created on Wed Mar 24 14:49:04 2021.
 
 
 from operator import attrgetter
+from utilities import pairwise
 
 
 # Functions:
@@ -78,10 +79,44 @@ class PeakTree:
 
     @classmethod
     def from_peak_objects(cls, peaks, presorted=True):
-        """Build a PeakTree and compute its data attributes."""
+        """Return new PeakTree from iterable of peak objects."""
         obj = cls.__new__(cls)
         obj._parent, obj._root, obj._children, obj._top = tree_from_peak_objects(peaks, presorted=presorted)
         obj._find_full()
+        return obj
+
+    @classmethod
+    def from_levels(cls, levels):
+        """Return new PeakTree from other tree's levels() output."""
+
+        def leaf_and_top(node):
+            children[node] = []
+            for n in obj.path(node, obj._full[node], obj.parent):
+                obj._top[n] = node
+
+        obj = cls.__new__(cls)
+        obj._parent = {}
+        children = {}
+        obj._top = {}
+        obj._full = {}
+        for (A, a), (B, b) in pairwise(levels.items()):
+            if a == 0:  # first item is the root:
+                obj._parent[A] = None
+                obj._full[A] = A
+                obj._root = A
+                stack = [A]
+            if b == a + 1:  # a subtree grows:
+                obj._full[B] = obj._full[A]
+                children[stack[-1]] = [B]  # B is the high child (of A)
+            else:  # (then a >= b) a subtree finishes:
+                del stack[b:]  # pop a slice
+                obj._full[B] = B
+                children[stack[-1]].append(B)  # B is a low child
+                leaf_and_top(A)  # A is a leaf and top
+            obj._parent[B] = stack[-1]
+            stack.append(B)
+        leaf_and_top(B)  # the last B is a leaf and top
+        obj._children = {p: tuple(c) for p, c in children.items()}
         return obj
 
     def __init__(self, data):
@@ -103,25 +138,14 @@ class PeakTree:
         """Return product with other tree (PeakTree or HyperPeakTree)."""
         return HyperPeakTree(self, other)
 
-    def __str__(self):
-        """Return printable tree structure."""
-        return self.as_string(self.root())
+    def __repr__(self) -> str:
+        """Return string that can reconstruct the PeakTree."""
+        return f"PeakTree.from_levels({repr(self.levels())})"
 
-    def as_string(self, localroot):
-        """Return printable subtree structure."""
-        str = "# Notation: <high> /& <low>/ => <parent>\n"
-        for full in self.full_nodes(localroot):
-            if not self.has_children(full):
-                continue
-            for node in self.path(self.top(full), self.high(full), self.parent):
-                str += f"{node}"
-                if len(self.children(self.parent(node))) == 2:
-                    str += f" /& {self.low(self.parent(node))[0]}/"
-                if len(self.children(self.parent(node))) > 2:
-                    str += f" /& {self.low(self.parent(node))}/"
-                str += " => "
-            str += f"{full}.\n"
-        return str
+    def __str__(self):
+        """Return string with tree in indented list notation."""
+        indent = "| "
+        return "\n".join([level * indent + str(node) for node, level in self.levels().items()])
 
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
@@ -147,6 +171,16 @@ class PeakTree:
         )
         self._root = new(self._root)
         return None
+    
+    def levels(self):
+        """Return ordered dict of node:level pairs (root is zero level)."""
+        levels = {}
+        for node in self.subtree():
+            if self.is_nonroot(node):
+                levels[node] = 1 + levels[self.parent(node)]
+            else:
+                levels[node] = 0
+        return levels
 
     def root(self):
         """Return the root node of the PeakTree."""
@@ -225,8 +259,8 @@ class PeakTree:
         if localroot is None:
             localroot = self.root()
         yield localroot
-        yield from self.high_descendants(localroot)
-        yield from self.low_descendants(localroot)
+        for child in self.children(localroot):
+            yield from self.subtree(child)
 
     def high_descendants(self, localroot=None):
         """Yield high children in the input node's subtree."""
@@ -403,6 +437,10 @@ class HyperPeakTree(PeakTree):
         """Return number of nodes in the HyperPeakTree."""
         return len(list(self.__iter__()))
 
+    def __repr__(self) -> str:
+        """Return string that can reconstruct the HyperPeakTree."""
+        return f"HyperPeakTree({repr(self.L)}, {repr(self.R)})"
+
     def root(self):
         """Return the root node of the HyperPeakTree."""
         return (self.L.root(), self.R.root())
@@ -504,6 +542,10 @@ class HyperPeakTree(PeakTree):
                 yield a, b
 
     def from_peak_objects(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+    
+    def from_levels(self):
         """Return that it is NotImplemented."""
         return NotImplemented
     

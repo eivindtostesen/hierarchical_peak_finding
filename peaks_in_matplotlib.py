@@ -155,9 +155,7 @@ class PeakTreeMatPlotLib(ChainedAttributes):
         self.yinterval = yinterval
         self.slice_of_x = slice_of_x
         self.slice_of_y = slice_of_y
-        self.level = {
-            n: len(list(self.rootself.root_path(n))) - 1 for n in self.rootself
-        }
+        self.level = self.rootself.levels()
         if not xlim:
             self.xlim = (self.X[self.rootself.root().start], self.X[self.rootself.root().end])
         if not ylim:
