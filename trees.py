@@ -23,8 +23,15 @@ from utilities import pairwise
 # Functions:
 
 
-def tree_from_peak_objects(peaks, presorted=True):
-    """Return (parent, root, children, top) from peaks having attrs: start, end, min, max."""
+def tree_from_peaks(
+    peaks,
+    presorted=True,
+    getstart=attrgetter("start"),
+    getend=attrgetter("end"),
+    getmin=attrgetter("min"),
+    getmax=attrgetter("max"),
+):
+    """Return (parent, root, children, top) from peaks having start, end, min, max."""
     parent = {}
     children = {}
     top = {}
@@ -32,16 +39,16 @@ def tree_from_peak_objects(peaks, presorted=True):
     if not presorted:
         peaks = list(peaks)
         # Order same as given by 'peaks' function:
-        peaks.sort(key=attrgetter("min"), reverse=True)
-        peaks.sort(key=attrgetter("end"))
+        peaks.sort(key=getmin, reverse=True)
+        peaks.sort(key=getend)
     for p in peaks:
         children[p] = []
-        while in_spe and p.start <= in_spe[-1].start:
+        while in_spe and getstart(p) <= getstart(in_spe[-1]):
             c = in_spe.pop()
             children[p].append(c)
             parent[c] = p
-        children[p].sort(key=attrgetter("start"))
-        children[p].sort(key=attrgetter("max"), reverse=True)
+        children[p].sort(key=getstart)
+        children[p].sort(key=getmax, reverse=True)
         children[p] = tuple(children[p])
         top[p] = top[children[p][0]] if children[p] else p
         in_spe.append(p)
@@ -78,11 +85,11 @@ class Tree:
     """
 
     @classmethod
-    def from_peak_objects(cls, peaks, presorted=True):
+    def from_peaks(cls, peaks, **kwargs):
         """Return new Tree from iterable of peak objects."""
         obj = cls.__new__(cls)
-        obj._parent, obj._root, obj._children, obj._top = tree_from_peak_objects(
-            peaks, presorted=presorted
+        obj._parent, obj._root, obj._children, obj._top = tree_from_peaks(
+            peaks, **kwargs
         )
         obj._find_full()
         return obj
@@ -545,7 +552,7 @@ class HyperTree(Tree):
             for b in self.R.filter(maxsize=maxsize, localroot=rb):
                 yield a, b
 
-    def from_peak_objects(self):
+    def from_peaks(self):
         """Return that it is NotImplemented."""
         return NotImplemented
 
