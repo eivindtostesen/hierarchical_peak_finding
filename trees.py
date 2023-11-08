@@ -40,8 +40,8 @@ def tree_from_peak_objects(peaks, presorted=True):
             c = in_spe.pop()
             children[p].append(c)
             parent[c] = p
-        children[p].sort(key=attrgetter('start'))
-        children[p].sort(key=attrgetter('max'), reverse=True)
+        children[p].sort(key=attrgetter("start"))
+        children[p].sort(key=attrgetter("max"), reverse=True)
         children[p] = tuple(children[p])
         top[p] = top[children[p][0]] if children[p] else p
         in_spe.append(p)
@@ -53,20 +53,20 @@ def tree_from_peak_objects(peaks, presorted=True):
 # Classes:
 
 
-class PeakTree:
+class Tree:
     """Tree of peaks in univariate data.
 
-    A PeakTree represents the hierarchical nesting of
+    A Tree represents the hierarchical nesting of
     peak and subpeak regions in 1D data such as a sequence of numbers,
     a time series, a function y(x) or other univariate data.
 
-    A PeakTree is initialized with an iterable of peak objects
+    A Tree is initialized with an iterable of peak objects
     that have attributes start, end, min, max. The peak objects
     must be unique hashable objects to be used as dictionary keys.
 
     Notes
     -----
-    Background literature for the PeakTree class is
+    Background literature for the Tree class is
     the subsection titled "1D peaks" in the article [1]_.
 
     References
@@ -79,15 +79,17 @@ class PeakTree:
 
     @classmethod
     def from_peak_objects(cls, peaks, presorted=True):
-        """Return new PeakTree from iterable of peak objects."""
+        """Return new Tree from iterable of peak objects."""
         obj = cls.__new__(cls)
-        obj._parent, obj._root, obj._children, obj._top = tree_from_peak_objects(peaks, presorted=presorted)
+        obj._parent, obj._root, obj._children, obj._top = tree_from_peak_objects(
+            peaks, presorted=presorted
+        )
         obj._find_full()
         return obj
 
     @classmethod
     def from_levels(cls, levels):
-        """Return new PeakTree from other tree's levels() output."""
+        """Return new Tree from other tree's levels() output."""
 
         def leaf_and_top(node):
             children[node] = []
@@ -123,29 +125,31 @@ class PeakTree:
         pass  # TODO
 
     def __contains__(self, node):
-        """Return True if the input is a node in the PeakTree."""
+        """Return True if the input is a node in the Tree."""
         return node in self._full
 
     def __iter__(self):
-        """Iterate over nodes in the PeakTree."""
+        """Iterate over nodes in the Tree."""
         return iter(self._full)
 
     def __len__(self):
-        """Return number of nodes in the PeakTree."""
+        """Return number of nodes in the Tree."""
         return len(self._full)
 
     def __matmul__(self, other):
-        """Return product with other tree (PeakTree or HyperPeakTree)."""
-        return HyperPeakTree(self, other)
+        """Return product with other tree (Tree or HyperTree)."""
+        return HyperTree(self, other)
 
     def __repr__(self) -> str:
-        """Return string that can reconstruct the PeakTree."""
-        return f"PeakTree.from_levels({repr(self.levels())})"
+        """Return string that can reconstruct the Tree."""
+        return f"Tree.from_levels({repr(self.levels())})"
 
     def __str__(self):
         """Return string with tree in indented list notation."""
         indent = "| "
-        return "\n".join([level * indent + str(node) for node, level in self.levels().items()])
+        return "\n".join(
+            [level * indent + str(node) for node, level in self.levels().items()]
+        )
 
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
@@ -158,7 +162,7 @@ class PeakTree:
         }
 
     def set_nodes(self, changes={}):
-        """Replace PeakTree nodes by using given mapping."""
+        """Replace Tree nodes by using given mapping."""
 
         def new(node):
             return changes[node] if node in changes else node
@@ -171,7 +175,7 @@ class PeakTree:
         )
         self._root = new(self._root)
         return None
-    
+
     def levels(self):
         """Return ordered dict of node:level pairs (root is zero level)."""
         levels = {}
@@ -183,7 +187,7 @@ class PeakTree:
         return levels
 
     def root(self):
-        """Return the root node of the PeakTree."""
+        """Return the root node of the Tree."""
         return self._root
 
     def is_nonroot(self, node):
@@ -388,25 +392,25 @@ class PeakTree:
         }
 
 
-class HyperPeakTree(PeakTree):
+class HyperTree(Tree):
     """Tree of higher-dimensional peaks.
 
-    A HyperPeakTree represents the hierarchical nesting of peaks
+    A HyperTree represents the hierarchical nesting of peaks
     and subpeaks in more dimensions, such as a mountain landscape
     with height z as a function of x and y.
 
-    A HyperPeakTree assumes dimensional decoupling, i.e. the landscape is a
+    A HyperTree assumes dimensional decoupling, i.e. the landscape is a
     sum z(x,y) = f(x) + g(y) or a product z(x,y) = f(x) * g(y).
 
-    A HyperPeakTree is constructed as a pair of lower-dimensional trees
-    of type PeakTree or HyperPeakTree.
+    A HyperTree is constructed as a pair of lower-dimensional trees
+    of type Tree or HyperTree.
 
-    A HyperPeakTree is a kind of product tree, but it is not the Cartesian
+    A HyperTree is a kind of product tree, but it is not the Cartesian
     product.
 
     Notes
     -----
-    Background literature for the HyperPeakTree class is
+    Background literature for the HyperTree class is
     the subsection titled "2D peaks" in the article [1]_.
 
     References
@@ -422,7 +426,7 @@ class HyperPeakTree(PeakTree):
         self.R = right_tree
 
     def __contains__(self, pair):
-        """Return True if the input is a node in the HyperPeakTree."""
+        """Return True if the input is a node in the HyperTree."""
         a, b = pair
         # test if (a, b) is 'sigma-above':
         return (
@@ -430,19 +434,19 @@ class HyperPeakTree(PeakTree):
         ) and (b == self.R.root() or self.R.size(self.R.parent(b)) > self.L.size(a))
 
     def __iter__(self):
-        """Iterate over nodes in the HyperPeakTree."""
+        """Iterate over nodes in the HyperTree."""
         yield from self.subtree()
 
     def __len__(self):
-        """Return number of nodes in the HyperPeakTree."""
+        """Return number of nodes in the HyperTree."""
         return len(list(self.__iter__()))
 
     def __repr__(self) -> str:
-        """Return string that can reconstruct the HyperPeakTree."""
-        return f"HyperPeakTree({repr(self.L)}, {repr(self.R)})"
+        """Return string that can reconstruct the HyperTree."""
+        return f"HyperTree({repr(self.L)}, {repr(self.R)})"
 
     def root(self):
-        """Return the root node of the HyperPeakTree."""
+        """Return the root node of the HyperTree."""
         return (self.L.root(), self.R.root())
 
     def is_nonroot(self, node):
@@ -544,11 +548,11 @@ class HyperPeakTree(PeakTree):
     def from_peak_objects(self):
         """Return that it is NotImplemented."""
         return NotImplemented
-    
+
     def from_levels(self):
         """Return that it is NotImplemented."""
         return NotImplemented
-    
+
     def as_dict_of_dicts(self):
         """Return that it is NotImplemented."""
         return NotImplemented

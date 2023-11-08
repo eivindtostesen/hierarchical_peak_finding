@@ -19,7 +19,7 @@ from utilities import ChainedAttributes
 def add_L_arrow(
     axes, tail_x, tail_y, head_x, head_y, *, color="C5", linewidth=1, **kwargs
 ):
-    """Plot an L-shaped arrow to indicate branch in PeakTree."""
+    """Plot an L-shaped arrow to indicate branch in Tree."""
     axes.add_patch(
         matplotlib.patches.FancyArrowPatch(
             (tail_x, tail_y),
@@ -122,8 +122,8 @@ def add_bar(axes, x1, x2, y1, *, height=0.5, color="C7", fill=True, **kwargs):
 # Classes:
 
 
-class PeakTreeMatPlotLib(ChainedAttributes):
-    """Plotting methods to be owned by a PeakTree."""
+class TreeMatPlotLib(ChainedAttributes):
+    """Plotting methods to be owned by a Tree."""
 
     def __init__(
         self,
@@ -141,7 +141,7 @@ class PeakTreeMatPlotLib(ChainedAttributes):
         slice_of_x={},
         slice_of_y={},
     ):
-        """Attach a plotting object to a PeakTree."""
+        """Attach a plotting object to a Tree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
         self.ax = ax
@@ -157,13 +157,18 @@ class PeakTreeMatPlotLib(ChainedAttributes):
         self.slice_of_y = slice_of_y
         self.level = self.rootself.levels()
         if not xlim:
-            self.xlim = (self.X[self.rootself.root().start], self.X[self.rootself.root().end])
+            self.xlim = (
+                self.X[self.rootself.root().start],
+                self.X[self.rootself.root().end],
+            )
         if not ylim:
             self.ylim = (self.rootself.root().min, self.rootself.root().max)
         if not xy:
             self.xy = {n: (self.X[n.argmax], n.min) for n in self.rootself}
         if not xinterval:
-            self.xinterval = {n: (self.X[n.start], self.X[n.end]) for n in self.rootself}
+            self.xinterval = {
+                n: (self.X[n.start], self.X[n.end]) for n in self.rootself
+            }
         if not yinterval:
             self.yinterval = {n: (n.min, n.max) for n in self.rootself}
         plt.style.use("fast")

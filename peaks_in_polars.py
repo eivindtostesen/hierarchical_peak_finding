@@ -9,8 +9,8 @@ Created on Sat Jan  7 16:30:46 2023
 """
 
 
-import polars as pl
 from itertools import chain
+import polars as pl
 from utilities import ChainedAttributes
 
 
@@ -21,22 +21,23 @@ _default = None
 # Classes:
 
 
-class PeakTreePolars(ChainedAttributes):
-    """Polars methods to be owned by a PeakTree."""
+class TreePolars(ChainedAttributes):
+    """Polars methods to be owned by a Tree."""
 
     def __init__(
         self,
         tree,
         attrname="polars",
         X=None,
-        objecttype = (
+        objecttype=(
             "node root parent full top children high low"
             "root_path top_path subtree high_descendants "
             "low_descendants full_nodes leaf_nodes "
-            "branch_nodes linear_nodes").split(),
+            "branch_nodes linear_nodes"
+        ).split(),
         **kwargs,
     ):
-        """Attach this polars-aware object to a PeakTree."""
+        """Attach this polars-aware object to a Tree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
         if X is None:
@@ -73,21 +74,21 @@ class PeakTreePolars(ChainedAttributes):
             setattr(self, name, kwargs[name])
 
     def series(self, name="node", filter=_default, *, definitions={}):
-        """Return series with one row per PeakTree node."""
+        """Return series with one row per Tree node."""
         if filter is _default:
             filter = self.rootself
-        dtype=pl.Object if name in self.objecttype else None
+        dtype = pl.Object if name in self.objecttype else None
         return pl.Series(
             name,
             map(
                 definitions[name] if name in definitions else getattr(self, name),
                 filter,
             ),
-            dtype=dtype
+            dtype=dtype,
         )
 
     def dataframe(self, columns="node", filter=_default, *, definitions={}):
-        """Return dataframe with one row per PeakTree node."""
+        """Return dataframe with one row per Tree node."""
         if filter is _default:
             filter = iter(self.rootself)
         nodes = list(iter(filter))
@@ -134,7 +135,7 @@ class PeakTreePolars(ChainedAttributes):
     # Out-of-the-box dataframes:
 
     def dump_data_attributes(self):
-        """Return a dump of the PeakTree's data attributes."""
+        """Return a dump of the Tree's data attributes."""
 
         def _listorscalar(data):
             if type(data) is dict:
@@ -167,7 +168,9 @@ class PeakTreePolars(ChainedAttributes):
 
     def numeric_properties(self):
         """Return dataframe with numeric (vertical) properties."""
-        return self.dataframe("node height size base_height").pipe(self.sort_by_height_and_size)
+        return self.dataframe("node height size base_height").pipe(
+            self.sort_by_height_and_size
+        )
 
     def location_properties(self):
         """Return dataframe with locational (horizontal) properties."""
