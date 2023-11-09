@@ -86,10 +86,33 @@ class Tree:
 
     @classmethod
     def from_peaks(cls, peaks, **kwargs):
-        """Return new Tree from iterable of peak objects."""
+        """Return new Tree from iterable of peaks."""
         obj = cls.__new__(cls)
         obj._parent, obj._root, obj._children, obj._top = tree_from_peaks(
             peaks, **kwargs
+        )
+        obj._find_full()
+        return obj
+
+    @classmethod
+    def from_valleys(
+        cls,
+        valleys,
+        presorted=True,
+        getstart=attrgetter("start"),
+        getend=attrgetter("end"),
+        getmin=lambda p: -p.max,
+        getmax=lambda p: -p.min,
+    ):
+        """Return new Tree from iterable of valleys."""
+        obj = cls.__new__(cls)
+        obj._parent, obj._root, obj._children, obj._top = tree_from_peaks(
+            valleys,
+            presorted=presorted,
+            getstart=getstart,
+            getend=getend,
+            getmin=getmin,
+            getmax=getmax,
         )
         obj._find_full()
         return obj
@@ -356,6 +379,7 @@ class Tree:
             localroot = self.root()
         filter = list(nodes)
         countdown = {n: len(self.children(n)) for n in self.subtree(localroot)}
+
         # Recursive "bottom-up" search via parents:
         def _yield_or_propagate(node):
             if node in filter:
@@ -375,6 +399,7 @@ class Tree:
         if localroot is None:
             localroot = self.root()
         filter = list(nodes)
+
         # Recursive "top-down" search via children:
         def _yield_or_branch(node):
             if node in filter:
@@ -553,6 +578,10 @@ class HyperTree(Tree):
                 yield a, b
 
     def from_peaks(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def from_valleys(self):
         """Return that it is NotImplemented."""
         return NotImplemented
 
