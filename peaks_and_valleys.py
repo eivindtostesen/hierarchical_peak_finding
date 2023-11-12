@@ -41,7 +41,7 @@ def find_peaks(values):
         yield tuple(r)
 
 
-def valleys(values):
+def find_valleys(values):
     """Yield valley regions as (start, end, min, max) tuples."""
     yield from map(lambda t: (t[0], t[1], -t[3], -t[2]), find_peaks(-y for y in values))
 
