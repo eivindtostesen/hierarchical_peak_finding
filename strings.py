@@ -49,18 +49,22 @@ class TreeStrings(ChainedAttributes):
         # defaults:
         if localroot is None:
             localroot = self.rootself.root()
-        string = "# Notation: <high> /& <low>/ => <parent>\n"
+        string = "# Notation: <main> /& <lateral>/ => <parent>\n"
         for full in self.rootself.full_nodes(localroot):
             if not self.rootself.has_children(full):
                 continue
             for node in self.rootself.path(
-                self.rootself.top(full), self.rootself.high(full), self.rootself.parent
+                self.rootself.core(full), self.rootself.main(full), self.rootself.parent
             ):
                 string += f"{node}"
                 if len(self.rootself.children(self.rootself.parent(node))) == 2:
-                    string += f" /& {self.rootself.low(self.rootself.parent(node))[0]}/"
+                    string += (
+                        f" /& {self.rootself.lateral(self.rootself.parent(node))[0]}/"
+                    )
                 if len(self.rootself.children(self.rootself.parent(node))) > 2:
-                    string += f" /& {self.rootself.low(self.rootself.parent(node))}/"
+                    string += (
+                        f" /& {self.rootself.lateral(self.rootself.parent(node))}/"
+                    )
                 string += " => "
             string += f"{full}.\n"
         return string if return_string else print(string)

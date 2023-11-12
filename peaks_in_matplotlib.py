@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.
 # -*- coding: utf-8 -*-
-"""Python module for visualizing peaks in matplotlib.
+"""Python module for visualizing peaks and valleys in matplotlib.
 
 Created on Thu Dec  1 16:13:14 2022
 
@@ -49,7 +49,7 @@ def add_L_arrow(
 def add_bounding_box(
     ax, x1, x2, y1, y2, *, edgecolor="C4", fill=False, linewidth=3, **kwargs
 ):
-    """Plot bounding box around a peak."""
+    """Plot bounding box around a peak or valley."""
     ax.add_patch(
         matplotlib.patches.Rectangle(
             xy=(x1, y1),
@@ -94,7 +94,7 @@ def add_pedestal(
 
 
 def add_crown(ax, xslice, yslice, y1, *, facecolor="gold", alpha=0.9, **kwargs):
-    """Color the area under a peak."""
+    """Color the area of a peak or valley."""
     ax.fill_between(
         xslice,
         yslice,
@@ -106,7 +106,7 @@ def add_crown(ax, xslice, yslice, y1, *, facecolor="gold", alpha=0.9, **kwargs):
 
 
 def add_bar(axes, x1, x2, y1, *, height=0.5, color="C7", fill=True, **kwargs):
-    """Plot a bar to indicate peak location."""
+    """Plot a bar to indicate peak or valley location."""
     axes.add_patch(
         matplotlib.patches.Rectangle(
             xy=(x1, y1),
@@ -138,6 +138,7 @@ class TreeMatPlotLib(ChainedAttributes):
         xy={},
         xinterval={},
         yinterval={},
+        boundary_value=None,
         slice_of_x={},
         slice_of_y={},
     ):
@@ -153,6 +154,7 @@ class TreeMatPlotLib(ChainedAttributes):
         self.xy = xy
         self.xinterval = xinterval
         self.yinterval = yinterval
+        self.boundary_value = boundary_value
         self.slice_of_x = slice_of_x
         self.slice_of_y = slice_of_y
         self.level = self.rootself.levels()
@@ -171,6 +173,8 @@ class TreeMatPlotLib(ChainedAttributes):
             }
         if not yinterval:
             self.yinterval = {n: (n.min, n.max) for n in self.rootself}
+        if not boundary_value:
+            self.boundary_value = {n: n.boundary_value() for n in self.rootself}
         plt.style.use("fast")
 
     def new(self, figsize=(10.0, 4.0)):
@@ -200,7 +204,7 @@ class TreeMatPlotLib(ChainedAttributes):
         return self
 
     def bounding_boxes(self, nodes=None, **kwargs):
-        """Plot bounding boxes around peaks."""
+        """Plot bounding boxes around peaks or valleys."""
         if nodes is None:
             nodes = self.rootself
         if self.ax is None:
@@ -215,7 +219,7 @@ class TreeMatPlotLib(ChainedAttributes):
         return self
 
     def crowns(self, nodes=None, **kwargs):
-        """Fill color inside peaks above base lines."""
+        """Fill color inside peaks or valleys."""
         if nodes is None:
             nodes = self.rootself
         if self.ax is None:
@@ -225,13 +229,13 @@ class TreeMatPlotLib(ChainedAttributes):
                 self.ax,
                 self.slice_of_x[n],
                 self.slice_of_y[n],
-                self.yinterval[n][0],
+                self.boundary_value[n],
                 **kwargs,
             )
         return self
 
     def pyramids(self, nodes=None, **kwargs):
-        """Plot pyramids of stacked locations of peaks."""
+        """Plot pyramids of stacked locations of peaks/valleys."""
         if nodes is None:
             nodes = self.rootself
         if self.ax is None:

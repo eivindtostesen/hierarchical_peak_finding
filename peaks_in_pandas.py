@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Python module for using pandas in peak analysis.
+"""Python module for using pandas in peak/valley analysis.
 
 Created on Sat Jan  7 16:29:38 2023
 
@@ -30,9 +30,9 @@ class TreePandas(ChainedAttributes):
         attrname="pandas",
         X=None,
         objecttype=(
-            "node root parent full top children high low"
-            "root_path top_path subtree high_descendants "
-            "low_descendants full_nodes leaf_nodes "
+            "node root parent full core children main lateral"
+            "root_path core_path subtree main_descendants "
+            "lateral_descendants full_nodes leaf_nodes "
             "branch_nodes linear_nodes"
         ).split(),
         **kwargs,
@@ -48,17 +48,17 @@ class TreePandas(ChainedAttributes):
             self.x_end = lambda n: X[n.end]
         self.node = lambda n: n
         self.root = lambda n: self.rootself.root()
-        self.high = (
-            lambda n: self.rootself.high(n) if self.rootself.has_children(n) else None
+        self.main = (
+            lambda n: self.rootself.main(n) if self.rootself.has_children(n) else None
         )
         for name in (
-            "parent children low full top is_nonroot "
-            "has_children size height base_height _index"
+            "parent children lateral full core is_nonroot "
+            "has_children size max min _index"
         ).split():
             setattr(self, name, getattr(self.rootself, name))
         for name in (
-            "root_path top_path subtree high_descendants "
-            "low_descendants full_nodes leaf_nodes "
+            "root_path core_path subtree main_descendants "
+            "lateral_descendants full_nodes leaf_nodes "
             "branch_nodes linear_nodes"
         ).split():
             setattr(
@@ -122,10 +122,10 @@ class TreePandas(ChainedAttributes):
             **kwargs,
         )
 
-    def sort_by_height_and_size(self, dataframe, **kwargs):
-        """Return dataframe sorted by descending height and size."""
+    def sort_by_max_and_size(self, dataframe, **kwargs):
+        """Return dataframe sorted by descending max and size."""
         return dataframe.pipe(self.sort, "size", ascending=False, **kwargs).pipe(
-            self.sort, "height", ascending=False, kind="stable", **kwargs
+            self.sort, "max", ascending=False, kind="stable", **kwargs
         )
 
     # Out-of-the-box dataframes:
@@ -139,7 +139,7 @@ class TreePandas(ChainedAttributes):
     def tree_structure(self):
         """Return dataframe with topological attributes."""
         return self.dataframe(
-            "top children node parent full root",
+            "core children node parent full root",
             filter=chain.from_iterable(
                 self.rootself.path(node, self.rootself.full(node), self.rootself.parent)
                 for node in self.rootself.leaf_nodes()
@@ -148,9 +148,7 @@ class TreePandas(ChainedAttributes):
 
     def numeric_properties(self):
         """Return dataframe with numeric (vertical) properties."""
-        return self.dataframe("node height size base_height").pipe(
-            self.sort_by_height_and_size
-        )
+        return self.dataframe("node max size min").pipe(self.sort_by_max_and_size)
 
     def location_properties(self):
         """Return dataframe with locational (horizontal) properties."""
