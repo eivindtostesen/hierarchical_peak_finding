@@ -15,7 +15,7 @@ from utilities import pairwise
 # Functions:
 
 
-def peaks(values):
+def find_peaks(values):
     """Yield peak regions as (start, end, min, max) tuples."""
     regions = []
     for i, (y1, y2) in enumerate(pairwise(values)):
@@ -39,6 +39,11 @@ def peaks(values):
     for r in reversed(regions):
         r[1] = i + 1  # use last i value
         yield tuple(r)
+
+
+def find_valleys(values):
+    """Yield valley regions as (start, end, min, max) tuples."""
+    yield from map(lambda t: (t[0], t[1], -t[3], -t[2]), find_peaks(-y for y in values))
 
 
 # Classes:
@@ -204,3 +209,12 @@ class NumSlice(SliceStr):
     def is_local_minimum(self):
         """Return True if slice of values is a local minimum."""
         return self.size == 0 and self.is_valley()
+
+    def boundary_value(self):
+        """Return peak's min or valley's max or None."""
+        if self.is_peak():
+            return self.min
+        elif self.is_valley():
+            return self.max
+        else:
+            return None

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Python module for trees of peaks in numeric data.
+"""Python module for trees of peak regions or valley regions.
 
-This module contains algorithms for building trees
-representing the hierarchical nesting of peak and subpeak regions
-in one-dimensional or higher-dimensional data.
-It also contains methods for searching trees and selecting peaks.
+This module contains algorithms for building trees that
+represent the hierarchical nesting of regions and subregions
+containing peaks or valleys in numeric
+one-dimensional or higher-dimensional data.
+The tree classes provide methods for searching and selecting regions.
 
 Requires Python 3.7+
 
@@ -23,50 +24,57 @@ from utilities import pairwise
 # Functions:
 
 
-def tree_from_peak_objects(peaks, presorted=True):
-    """Return (parent, root, children, top) from peaks having attrs: start, end, min, max."""
+def tree_from_peaks(
+    peaks,
+    presorted=True,
+    getstart=attrgetter("start"),
+    getend=attrgetter("end"),
+    getmin=attrgetter("min"),
+    getmax=attrgetter("max"),
+):
+    """Return (parent, root, children, core) from peak regions having start, end, min, max."""
     parent = {}
     children = {}
-    top = {}
+    core = {}
     in_spe = []
     if not presorted:
         peaks = list(peaks)
-        # Order same as given by 'peaks' function:
-        peaks.sort(key=attrgetter("min"), reverse=True)
-        peaks.sort(key=attrgetter("end"))
+        # Order same as given by 'find_peaks' function:
+        peaks.sort(key=getmin, reverse=True)
+        peaks.sort(key=getend)
     for p in peaks:
         children[p] = []
-        while in_spe and p.start <= in_spe[-1].start:
+        while in_spe and getstart(p) <= getstart(in_spe[-1]):
             c = in_spe.pop()
             children[p].append(c)
             parent[c] = p
-        children[p].sort(key=attrgetter('start'))
-        children[p].sort(key=attrgetter('max'), reverse=True)
+        children[p].sort(key=getstart)
+        children[p].sort(key=getmax, reverse=True)
         children[p] = tuple(children[p])
-        top[p] = top[children[p][0]] if children[p] else p
+        core[p] = core[children[p][0]] if children[p] else p
         in_spe.append(p)
     root = in_spe.pop()
     parent[root] = None
-    return parent, root, children, top
+    return parent, root, children, core
 
 
 # Classes:
 
 
-class PeakTree:
-    """Tree of peaks in univariate data.
+class Tree:
+    """Tree of regions in univariate data.
 
-    A PeakTree represents the hierarchical nesting of
-    peak and subpeak regions in 1D data such as a sequence of numbers,
+    A Tree represents the hierarchical nesting of
+    peak or valley regions in 1D data such as a sequence of numbers,
     a time series, a function y(x) or other univariate data.
 
-    A PeakTree is initialized with an iterable of peak objects
-    that have attributes start, end, min, max. The peak objects
+    A Tree is initialized with an iterable of regions
+    that have start, end, min, max. The regions
     must be unique hashable objects to be used as dictionary keys.
 
     Notes
     -----
-    Background literature for the PeakTree class is
+    Background literature for the Tree class is
     the subsection titled "1D peaks" in the article [1]_.
 
     References
@@ -78,26 +86,51 @@ class PeakTree:
     """
 
     @classmethod
-    def from_peak_objects(cls, peaks, presorted=True):
-        """Return new PeakTree from iterable of peak objects."""
+    def from_peaks(cls, peaks, **kwargs):
+        """Return new Tree from iterable of peak regions."""
         obj = cls.__new__(cls)
-        obj._parent, obj._root, obj._children, obj._top = tree_from_peak_objects(peaks, presorted=presorted)
+        obj._parent, obj._root, obj._children, obj._core = tree_from_peaks(
+            peaks, **kwargs
+        )
+        obj._find_full()
+        return obj
+
+    @classmethod
+    def from_valleys(
+        cls,
+        valleys,
+        presorted=True,
+        getstart=attrgetter("start"),
+        getend=attrgetter("end"),
+        getmin=lambda p: -p.max,
+        getmax=lambda p: -p.min,
+    ):
+        """Return new Tree from iterable of valley regions."""
+        obj = cls.__new__(cls)
+        obj._parent, obj._root, obj._children, obj._core = tree_from_peaks(
+            valleys,
+            presorted=presorted,
+            getstart=getstart,
+            getend=getend,
+            getmin=getmin,
+            getmax=getmax,
+        )
         obj._find_full()
         return obj
 
     @classmethod
     def from_levels(cls, levels):
-        """Return new PeakTree from other tree's levels() output."""
+        """Return new Tree from other tree's levels() output."""
 
-        def leaf_and_top(node):
+        def leaf_and_core(node):
             children[node] = []
             for n in obj.path(node, obj._full[node], obj.parent):
-                obj._top[n] = node
+                obj._core[n] = node
 
         obj = cls.__new__(cls)
         obj._parent = {}
         children = {}
-        obj._top = {}
+        obj._core = {}
         obj._full = {}
         for (A, a), (B, b) in pairwise(levels.items()):
             if a == 0:  # first item is the root:
@@ -107,15 +140,15 @@ class PeakTree:
                 stack = [A]
             if b == a + 1:  # a subtree grows:
                 obj._full[B] = obj._full[A]
-                children[stack[-1]] = [B]  # B is the high child (of A)
+                children[stack[-1]] = [B]  # B is the main child (of A)
             else:  # (then a >= b) a subtree finishes:
                 del stack[b:]  # pop a slice
                 obj._full[B] = B
-                children[stack[-1]].append(B)  # B is a low child
-                leaf_and_top(A)  # A is a leaf and top
+                children[stack[-1]].append(B)  # B is a lateral child
+                leaf_and_core(A)  # A is a leaf and core
             obj._parent[B] = stack[-1]
             stack.append(B)
-        leaf_and_top(B)  # the last B is a leaf and top
+        leaf_and_core(B)  # the last B is a leaf and core
         obj._children = {p: tuple(c) for p, c in children.items()}
         return obj
 
@@ -123,47 +156,49 @@ class PeakTree:
         pass  # TODO
 
     def __contains__(self, node):
-        """Return True if the input is a node in the PeakTree."""
+        """Return True if the input is a node in the Tree."""
         return node in self._full
 
     def __iter__(self):
-        """Iterate over nodes in the PeakTree."""
+        """Iterate over nodes in the Tree."""
         return iter(self._full)
 
     def __len__(self):
-        """Return number of nodes in the PeakTree."""
+        """Return number of nodes in the Tree."""
         return len(self._full)
 
     def __matmul__(self, other):
-        """Return product with other tree (PeakTree or HyperPeakTree)."""
-        return HyperPeakTree(self, other)
+        """Return product self @ other (other is a Tree or HyperTree)."""
+        return HyperTree(self, other)
 
     def __repr__(self) -> str:
-        """Return string that can reconstruct the PeakTree."""
-        return f"PeakTree.from_levels({repr(self.levels())})"
+        """Return string that can reconstruct the Tree."""
+        return f"Tree.from_levels({repr(self.levels())})"
 
     def __str__(self):
         """Return string with tree in indented list notation."""
         indent = "| "
-        return "\n".join([level * indent + str(node) for node, level in self.levels().items()])
+        return "\n".join(
+            [level * indent + str(node) for node, level in self.levels().items()]
+        )
 
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
         return {
             "_parent": self._parent,
             "_children": self._children,
-            "_top": self._top,
+            "_core": self._core,
             "_full": self._full,
             "_root": self._root,
         }
 
     def set_nodes(self, changes={}):
-        """Replace PeakTree nodes by using given mapping."""
+        """Replace Tree nodes by using given mapping."""
 
         def new(node):
             return changes[node] if node in changes else node
 
-        self._top = dict((new(x), new(y)) for (x, y) in self._top.items())
+        self._core = dict((new(x), new(y)) for (x, y) in self._core.items())
         self._full = dict((new(x), new(y)) for (x, y) in self._full.items())
         self._parent = dict((new(x), new(y)) for (x, y) in self._parent.items())
         self._children = dict(
@@ -171,7 +206,7 @@ class PeakTree:
         )
         self._root = new(self._root)
         return None
-    
+
     def levels(self):
         """Return ordered dict of node:level pairs (root is zero level)."""
         levels = {}
@@ -183,55 +218,55 @@ class PeakTree:
         return levels
 
     def root(self):
-        """Return the root node of the PeakTree."""
+        """Return the root node of the Tree."""
         return self._root
 
     def is_nonroot(self, node):
-        """Return True if the input node has a parent."""
+        """Return True if the given node has a parent."""
         return node != self._root
 
-    def top(self, node):
-        """Return the highest leaf node in the node's subtree."""
-        return self._top[node]
+    def core(self, node):
+        """Return the given node's core region (main leaf in subtree)."""
+        return self._core[node]
 
     def has_children(self, node):
-        """Return True if the input node has subpeaks."""
-        return node != self._top[node]
+        """Return True if the given node has sub regions."""
+        return node != self._core[node]
 
-    def height(self, node):
-        """Return the height at the top of the input peak."""
+    def max(self, node):
+        """Return the max value in the given region."""
         return node.max
 
-    def base_height(self, node):
-        """Return the height at the base of the input peak."""
+    def min(self, node):
+        """Return the min value in the given region."""
         return node.min
 
     def size(self, node):
-        """Return vertical distance between top and base."""
+        """Return vertical size of given node (max minus min)."""
         return node.size
 
     def parent(self, node):
-        """Return the input peak merged with its neighboring peak."""
+        """Return the parent (containing region) or None."""
         return self._parent[node]
 
     def children(self, node):
-        """Return tuple of children (subpeaks) ordered after height."""
+        """Return ordered tuple of children."""
         return self._children[node]
 
-    def high(self, node):
-        """Return the highest of the input peak's subpeaks."""
+    def main(self, node):
+        """Return the given node's main child (first in tuple)."""
         return self.children(node)[0]
 
-    def low(self, node):
-        """Return tuple of the input peak's lower subpeaks."""
+    def lateral(self, node):
+        """Return the given node's lateral children (tuple except first)."""
         return self.children(node)[1:]
 
     def full(self, node):
-        """Return the largest peak with same top as the input peak."""
+        """Return the largest region with same core as the given node."""
         return self._full[node]
 
     def _index(self, node):
-        """Return the zero-based index of the input node."""
+        """Return the zero-based index of the given node."""
         # accessing the preserved insertion order:
         return list(self._full).index(node)
 
@@ -246,15 +281,15 @@ class PeakTree:
             yield climber
 
     def root_path(self, node):
-        """Yield nodes on path from a node to its root."""
+        """Yield nodes on the path from given node to its root."""
         yield from self.path(node, self.root(), self.parent)
 
-    def top_path(self, node):
-        """Yield nodes on path from a node to its top."""
-        yield from self.path(node, self.top(node), self.high)
+    def core_path(self, node):
+        """Yield nodes on the path from given node to its core."""
+        yield from self.path(node, self.core(node), self.main)
 
     def subtree(self, localroot=None):
-        """Yield all nodes in the input node's subtree."""
+        """Yield all nodes in the given subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
@@ -262,37 +297,37 @@ class PeakTree:
         for child in self.children(localroot):
             yield from self.subtree(child)
 
-    def high_descendants(self, localroot=None):
-        """Yield high children in the input node's subtree."""
+    def main_descendants(self, localroot=None):
+        """Yield main nodes in the given subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
         if self.has_children(localroot):
-            yield self.high(localroot)
+            yield self.main(localroot)
             for child in self.children(localroot):
-                yield from self.high_descendants(child)
+                yield from self.main_descendants(child)
 
-    def low_descendants(self, localroot=None):
-        """Yield lower children in the input node's subtree."""
+    def lateral_descendants(self, localroot=None):
+        """Yield lateral nodes in the given subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
         if self.has_children(localroot):
-            yield from self.low(localroot)
+            yield from self.lateral(localroot)
             for child in self.children(localroot):
-                yield from self.low_descendants(child)
+                yield from self.lateral_descendants(child)
 
     def full_nodes(self, localroot=None):
-        """Yield full nodes in the input node's subtree."""
+        """Yield full nodes in the given subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
         if localroot == self.full(localroot):
             yield localroot
-        yield from self.low_descendants(localroot)
+        yield from self.lateral_descendants(localroot)
 
     def leaf_nodes(self, localroot=None):
-        """Yield leaf nodes (local maxima) in (sub)tree."""
+        """Yield subtree nodes that have no children."""
         # defaults:
         if localroot is None:
             localroot = self.root()
@@ -301,7 +336,7 @@ class PeakTree:
         )
 
     def branch_nodes(self, localroot=None):
-        """Yield nodes in (sub)tree with two or more children."""
+        """Yield subtree nodes that have two or more children."""
         # defaults:
         if localroot is None:
             localroot = self.root()
@@ -310,7 +345,7 @@ class PeakTree:
         )
 
     def linear_nodes(self, localroot=None):
-        """Yield nodes in (sub)tree with one child."""
+        """Yield subtree nodes that have one child."""
         # defaults:
         if localroot is None:
             localroot = self.root()
@@ -329,13 +364,13 @@ class PeakTree:
         if self.size(localroot) < maxsize:
             yield localroot
         else:
-            climber = self.top(localroot)
+            climber = self.core(localroot)
             while self.size(self.parent(climber)) < maxsize:
                 climber = self.parent(climber)
             yield climber
             while climber != localroot:
                 climber = self.parent(climber)
-                for child in self.low(climber):
+                for child in self.lateral(climber):
                     yield from self.filter(maxsize=maxsize, localroot=child)
 
     def innermost(self, nodes, localroot=None):
@@ -345,6 +380,7 @@ class PeakTree:
             localroot = self.root()
         filter = list(nodes)
         countdown = {n: len(self.children(n)) for n in self.subtree(localroot)}
+
         # Recursive "bottom-up" search via parents:
         def _yield_or_propagate(node):
             if node in filter:
@@ -364,6 +400,7 @@ class PeakTree:
         if localroot is None:
             localroot = self.root()
         filter = list(nodes)
+
         # Recursive "top-down" search via children:
         def _yield_or_branch(node):
             if node in filter:
@@ -381,32 +418,32 @@ class PeakTree:
 
         def fullnodes():
             yield self.root()
-            yield from self.low_descendants()
+            yield from self.lateral_descendants()
 
         self._full = {
-            node: full for full in fullnodes() for node in self.top_path(full)
+            node: full for full in fullnodes() for node in self.core_path(full)
         }
 
 
-class HyperPeakTree(PeakTree):
-    """Tree of higher-dimensional peaks.
+class HyperTree(Tree):
+    """Tree of higher-dimensional regions.
 
-    A HyperPeakTree represents the hierarchical nesting of peaks
-    and subpeaks in more dimensions, such as a mountain landscape
+    A HyperTree represents the hierarchical nesting of peak regions
+    or valley regions in more dimensions, such as a mountain landscape
     with height z as a function of x and y.
 
-    A HyperPeakTree assumes dimensional decoupling, i.e. the landscape is a
+    A HyperTree assumes dimensional decoupling, i.e. the landscape is a
     sum z(x,y) = f(x) + g(y) or a product z(x,y) = f(x) * g(y).
 
-    A HyperPeakTree is constructed as a pair of lower-dimensional trees
-    of type PeakTree or HyperPeakTree.
+    A HyperTree is constructed as a pair of trees that are
+    of type Tree or HyperTree.
 
-    A HyperPeakTree is a kind of product tree, but it is not the Cartesian
+    A HyperTree is a kind of product tree, but it is not the Cartesian
     product.
 
     Notes
     -----
-    Background literature for the HyperPeakTree class is
+    Background literature for the HyperTree class is
     the subsection titled "2D peaks" in the article [1]_.
 
     References
@@ -422,7 +459,7 @@ class HyperPeakTree(PeakTree):
         self.R = right_tree
 
     def __contains__(self, pair):
-        """Return True if the input is a node in the HyperPeakTree."""
+        """Return True if the input is a node in the HyperTree."""
         a, b = pair
         # test if (a, b) is 'sigma-above':
         return (
@@ -430,19 +467,19 @@ class HyperPeakTree(PeakTree):
         ) and (b == self.R.root() or self.R.size(self.R.parent(b)) > self.L.size(a))
 
     def __iter__(self):
-        """Iterate over nodes in the HyperPeakTree."""
+        """Iterate over nodes in the HyperTree."""
         yield from self.subtree()
 
     def __len__(self):
-        """Return number of nodes in the HyperPeakTree."""
+        """Return number of nodes in the HyperTree."""
         return len(list(self.__iter__()))
 
     def __repr__(self) -> str:
-        """Return string that can reconstruct the HyperPeakTree."""
-        return f"HyperPeakTree({repr(self.L)}, {repr(self.R)})"
+        """Return string that can reconstruct the HyperTree."""
+        return f"HyperTree({repr(self.L)}, {repr(self.R)})"
 
     def root(self):
-        """Return the root node of the HyperPeakTree."""
+        """Return the root node of the HyperTree."""
         return (self.L.root(), self.R.root())
 
     def is_nonroot(self, node):
@@ -450,10 +487,10 @@ class HyperPeakTree(PeakTree):
         a, b = node
         return self.L.is_nonroot(a) or self.R.is_nonroot(b)
 
-    def top(self, node):
-        """Return the given node's top (a leaf node)."""
+    def core(self, node):
+        """Return the given node's core (main leaf node)."""
         a, b = node
-        return (self.L.top(a), self.R.top(b))
+        return (self.L.core(a), self.R.core(b))
 
     def has_children(self, node):
         """Return True if given node has children."""
@@ -497,22 +534,22 @@ class HyperPeakTree(PeakTree):
                 (ca, cb) for ca in self.L.children(a) for cb in self.R.children(b)
             )
 
-    def high(self, node):
-        """Return the child that has the same top."""
+    def main(self, node):
+        """Return the main child (the child that has the same core)."""
         a, b = node
         if self.L.size(a) > self.R.size(b):
-            return (self.L.high(a), b)
+            return (self.L.main(a), b)
         elif self.L.size(a) < self.R.size(b):
-            return (a, self.R.high(b))
+            return (a, self.R.main(b))
         elif self.L.size(a) == self.R.size(b):
-            return (self.L.high(a), self.R.high(b))
+            return (self.L.main(a), self.R.main(b))
 
     def full(self, node):
-        """Return the largest node with same top as given node."""
+        """Return the largest node with same core as given node."""
         climber = node
         while self.is_nonroot(climber):
             nextstep = self.parent(climber)
-            if self.top(nextstep) == self.top(climber):
+            if self.core(nextstep) == self.core(climber):
                 climber = nextstep
             else:
                 break
@@ -524,7 +561,7 @@ class HyperPeakTree(PeakTree):
         return self.L._index(a), self.R._index(b)
 
     def leaf_nodes(self):
-        """Yield leaf nodes (local maxima) in (sub)tree."""
+        """Yield leaf nodes."""
         for a in self.L.leaf_nodes():
             for b in self.R.leaf_nodes():
                 yield a, b
@@ -541,14 +578,18 @@ class HyperPeakTree(PeakTree):
             for b in self.R.filter(maxsize=maxsize, localroot=rb):
                 yield a, b
 
-    def from_peak_objects(self):
+    def from_peaks(self):
         """Return that it is NotImplemented."""
         return NotImplemented
-    
+
+    def from_valleys(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
     def from_levels(self):
         """Return that it is NotImplemented."""
         return NotImplemented
-    
+
     def as_dict_of_dicts(self):
         """Return that it is NotImplemented."""
         return NotImplemented
@@ -557,12 +598,12 @@ class HyperPeakTree(PeakTree):
         """Return that it is NotImplemented."""
         return NotImplemented
 
-    def height(self, frame):
-        """Return that height is NotImplemented."""
+    def max(self, frame):
+        """Return that max is NotImplemented."""
         return NotImplemented
 
-    def base_height(self, node):
-        """Return that base_height is NotImplemented."""
+    def min(self, node):
+        """Return that min is NotImplemented."""
         return NotImplemented
 
     def _find_full(self):

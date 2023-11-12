@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Python module for using polars in peak analysis.
+"""Python module for using polars in peak/valley analysis.
 
 Created on Sat Jan  7 16:30:46 2023
 
@@ -9,8 +9,8 @@ Created on Sat Jan  7 16:30:46 2023
 """
 
 
-import polars as pl
 from itertools import chain
+import polars as pl
 from utilities import ChainedAttributes
 
 
@@ -21,22 +21,23 @@ _default = None
 # Classes:
 
 
-class PeakTreePolars(ChainedAttributes):
-    """Polars methods to be owned by a PeakTree."""
+class TreePolars(ChainedAttributes):
+    """Polars methods to be owned by a Tree."""
 
     def __init__(
         self,
         tree,
         attrname="polars",
         X=None,
-        objecttype = (
-            "node root parent full top children high low"
-            "root_path top_path subtree high_descendants "
-            "low_descendants full_nodes leaf_nodes "
-            "branch_nodes linear_nodes").split(),
+        objecttype=(
+            "node root parent full core children main lateral"
+            "root_path core_path subtree main_descendants "
+            "lateral_descendants full_nodes leaf_nodes "
+            "branch_nodes linear_nodes"
+        ).split(),
         **kwargs,
     ):
-        """Attach this polars-aware object to a PeakTree."""
+        """Attach this polars-aware object to a Tree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
         if X is None:
@@ -47,16 +48,16 @@ class PeakTreePolars(ChainedAttributes):
             self.x_end = lambda n: X[n.end]
         self.node = lambda n: n
         self.root = lambda n: self.rootself.root()
-        self.high = (
-            lambda n: self.rootself.high(n) if self.rootself.has_children(n) else None
+        self.main = (
+            lambda n: self.rootself.main(n) if self.rootself.has_children(n) else None
         )
         for name in (
-            "parent full top is_nonroot has_children size height base_height _index"
+            "parent full core is_nonroot has_children size max min _index"
         ).split():
             setattr(self, name, getattr(self.rootself, name))
         for name in (
-            "children low root_path top_path subtree high_descendants "
-            "low_descendants full_nodes leaf_nodes "
+            "children lateral root_path core_path subtree main_descendants "
+            "lateral_descendants full_nodes leaf_nodes "
             "branch_nodes linear_nodes"
         ).split():
             setattr(
@@ -73,21 +74,21 @@ class PeakTreePolars(ChainedAttributes):
             setattr(self, name, kwargs[name])
 
     def series(self, name="node", filter=_default, *, definitions={}):
-        """Return series with one row per PeakTree node."""
+        """Return series with one row per Tree node."""
         if filter is _default:
             filter = self.rootself
-        dtype=pl.Object if name in self.objecttype else None
+        dtype = pl.Object if name in self.objecttype else None
         return pl.Series(
             name,
             map(
                 definitions[name] if name in definitions else getattr(self, name),
                 filter,
             ),
-            dtype=dtype
+            dtype=dtype,
         )
 
     def dataframe(self, columns="node", filter=_default, *, definitions={}):
-        """Return dataframe with one row per PeakTree node."""
+        """Return dataframe with one row per Tree node."""
         if filter is _default:
             filter = iter(self.rootself)
         nodes = list(iter(filter))
@@ -125,16 +126,16 @@ class PeakTreePolars(ChainedAttributes):
             .select([pl.exclude("sorting_column")])
         )
 
-    def sort_by_height_and_size(self, dataframe):
-        """Return dataframe sorted by height and size."""
+    def sort_by_max_and_size(self, dataframe):
+        """Return dataframe sorted by max and size."""
         return dataframe.pipe(self.sort, by="size", descending=True).pipe(
-            self.sort, by="height", descending=True
+            self.sort, by="max", descending=True
         )
 
     # Out-of-the-box dataframes:
 
     def dump_data_attributes(self):
-        """Return a dump of the PeakTree's data attributes."""
+        """Return a dump of the Tree's data attributes."""
 
         def _listorscalar(data):
             if type(data) is dict:
@@ -158,7 +159,7 @@ class PeakTreePolars(ChainedAttributes):
     def tree_structure(self):
         """Return dataframe with topological attributes."""
         return self.dataframe(
-            "top children node parent full root",
+            "core children node parent full root",
             filter=chain.from_iterable(
                 self.rootself.path(node, self.rootself.full(node), self.rootself.parent)
                 for node in self.rootself.leaf_nodes()
@@ -167,7 +168,7 @@ class PeakTreePolars(ChainedAttributes):
 
     def numeric_properties(self):
         """Return dataframe with numeric (vertical) properties."""
-        return self.dataframe("node height size base_height").pipe(self.sort_by_height_and_size)
+        return self.dataframe("node max size min").pipe(self.sort_by_max_and_size)
 
     def location_properties(self):
         """Return dataframe with locational (horizontal) properties."""
