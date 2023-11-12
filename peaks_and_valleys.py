@@ -15,7 +15,7 @@ from utilities import pairwise
 # Functions:
 
 
-def peaks(values):
+def find_peaks(values):
     """Yield peak regions as (start, end, min, max) tuples."""
     regions = []
     for i, (y1, y2) in enumerate(pairwise(values)):
@@ -43,7 +43,7 @@ def peaks(values):
 
 def valleys(values):
     """Yield valley regions as (start, end, min, max) tuples."""
-    yield from map(lambda t: (t[0], t[1], -t[3], -t[2]), peaks(-y for y in values))
+    yield from map(lambda t: (t[0], t[1], -t[3], -t[2]), find_peaks(-y for y in values))
 
 
 # Classes:

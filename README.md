@@ -1,4 +1,4 @@
-# Hierarchical Peak and Valley Finding
+# Hierarchical Peaks and Valleys
 
 Python library for hierarchical analysis of peaks and valleys in numeric data.
 * Peak and valley regions can be nested, for example, when a large peak region contains smaller subpeak regions.
@@ -8,12 +8,12 @@ Python library for hierarchical analysis of peaks and valleys in numeric data.
 ![peak plot](output.png "fig, (peaks.plot.ax, valleys.plot.ax) = plt.subplots(2, 1, sharex=True, figsize=(4, 4));
 peaks.plot.crowns(peaks.filter(maxsize=7))
 peaks.plot.bounding_boxes(peaks.filter(maxsize=7))
-valleys.plot.crowns(valleys.filter(maxsize=7), facecolor="C9")
-valleys.plot.bounding_boxes(valleys.filter(maxsize=7), edgecolor="C1")
+valleys.plot.crowns(valleys.filter(maxsize=7), facecolor='C9')
+valleys.plot.bounding_boxes(valleys.filter(maxsize=7), edgecolor='C1')
 peaks.plot.ax.set_title('Peak regions')
 valleys.plot.ax.set_title('Valley regions')
-peaks.plot.ax.plot(X, Y, linewidth=2, color="black")
-valleys.plot.ax.plot(X, Y, linewidth=2, color="black");")
+peaks.plot.ax.plot(X, Y, linewidth=2, color='black')
+valleys.plot.ax.plot(X, Y, linewidth=2, color='black');")
 
 ## Howto files
 For tutorials and documentation of the usage, jupyter notebooks are (or will be) included:

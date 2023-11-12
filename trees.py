@@ -39,7 +39,7 @@ def tree_from_peaks(
     in_spe = []
     if not presorted:
         peaks = list(peaks)
-        # Order same as given by 'peaks' function:
+        # Order same as given by 'find_peaks' function:
         peaks.sort(key=getmin, reverse=True)
         peaks.sort(key=getend)
     for p in peaks:
