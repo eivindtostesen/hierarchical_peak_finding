@@ -176,9 +176,24 @@ class Tree:
         return f"Tree.from_levels({repr(dict(self.levels()))})"
 
     def __str__(self):
-        """Return string with tree in indented list notation."""
-        indent = "| "
-        return "\n".join([level * indent + str(node) for node, level in self.levels()])
+        """Return tree as string using box drawing characters."""
+        indent = [""]
+        lines = []
+        for node, level in self.levels():
+            if level == 0:
+                # if node is root:
+                lines.append(str(node))
+            elif node == self.children(self.parent(node))[-1]:
+                # if node is a last child:
+                del indent[level:]
+                lines.append("".join([*indent, "└─", str(node)]))
+                indent.append("  ")
+            else:
+                # if node is a non-last child:
+                del indent[level:]
+                lines.append("".join([*indent, "├─", str(node)]))
+                indent.append("│ ")
+        return "\n".join(lines)
 
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
