@@ -27,20 +27,19 @@ class TreeStrings(ChainedAttributes):
         """Attach a string methods object."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
-        self.level = self.rootself.levels()
 
     def repr(self, return_string=False):
         """Prettyprint a repr that can reconstruct the tree."""
         if hasattr(self.rootself, "L"):
             string = f"HyperTree(\n{self.rootself.L.string.repr(return_string=True)}, \n{self.rootself.R.string.repr(return_string=True)}\n)"
         else:
-            string = f"Tree.from_levels(\n{pprint.pformat(self.level, indent=2, sort_dicts=False)}\n)"
+            string = f"Tree.from_levels(\n{pprint.pformat(dict(self.rootself.levels()), indent=2, sort_dicts=False)}\n)"
         return string if return_string else print(string)
 
     def indented_list(self, indent="| ", return_string=False):
         """Print tree in indented list notation."""
         string = "\n".join(
-            [level * indent + str(node) for node, level in self.level.items()]
+            [level * indent + str(node) for node, level in self.rootself.levels()]
         )
         return string if return_string else print(string)
 
