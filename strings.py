@@ -36,12 +36,19 @@ class TreeStrings(ChainedAttributes):
             string = f"Tree.from_levels(\n{pprint.pformat(dict(self.rootself.levels()), indent=2, sort_dicts=False)}\n)"
         return string if return_string else print(string)
 
-    def indented_list(self, indent="| ", return_string=False):
+    def indented_list(self, localroot=None, indent="| ", return_string=False):
         """Print tree in indented list notation."""
-        string = "\n".join(
-            [level * indent + str(node) for node, level in self.rootself.levels()]
-        )
-        return string if return_string else print(string)
+        # defaults:
+        if localroot is None:
+            localroot = self.rootself.root()
+        if return_string:
+            return "\n".join(
+                level * indent + str(node)
+                for node, level in self.rootself.levels(localroot=localroot)
+            )
+        else:
+            for node, level in self.rootself.levels(localroot=localroot):
+                print(level * indent + str(node))
 
     def riverflow(self, localroot=None, return_string=False):
         """Print subtree in riverflow notation."""
