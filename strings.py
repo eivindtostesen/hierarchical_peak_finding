@@ -63,7 +63,9 @@ class TreeStrings(ChainedAttributes):
                     )
                 if len(self.rootself.children(self.rootself.parent(node))) > 2:
                     string += (
-                        f" /& {self.rootself.lateral(self.rootself.parent(node))}/"
+                        " /& "
+                        + ", ".join(self.rootself.lateral(self.rootself.parent(node)))
+                        + "/"
                     )
                 string += " => "
             string += f"{full}.\n"
