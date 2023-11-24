@@ -76,3 +76,36 @@ class TreeStrings(ChainedAttributes):
                 string += " => "
             string += f"{full}.\n"
         return string if return_string else print(string)
+
+    def boxdrawing(
+        self,
+        localroot=None,
+        return_string=False,
+        nonlast="├─",
+        last="└─",
+        vert="│ ",
+        spaces="  ",
+        margin="",
+    ):
+        """Print subtree using box drawing characters."""
+        # defaults:
+        if localroot is None:
+            localroot = self.rootself.root()
+
+        indent = [margin]
+        lines = []
+        for node, level in self.rootself.levels(localroot=localroot):
+            if level == 0:
+                # if node is localroot:
+                lines.append(margin + str(node))
+            elif node == self.rootself.children(self.rootself.parent(node))[-1]:
+                # if node is a last child:
+                del indent[level:]
+                lines.append("".join([*indent, last, str(node)]))
+                indent.append(spaces)
+            else:
+                # if node is a non-last child:
+                del indent[level:]
+                lines.append("".join([*indent, nonlast, str(node)]))
+                indent.append(vert)
+        return "\n".join(lines) if return_string else print(*lines, sep="\n")
