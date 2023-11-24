@@ -119,8 +119,8 @@ class Tree:
         return obj
 
     @classmethod
-    def from_levels(cls, levels):
-        """Return new Tree from other tree's levels() output."""
+    def from_levels(cls, levelsdict):
+        """Return new Tree from other tree's levels-dict."""
 
         def leaf_and_core(node):
             children[node] = []
@@ -132,7 +132,7 @@ class Tree:
         children = {}
         obj._core = {}
         obj._full = {}
-        for (A, a), (B, b) in pairwise(levels.items()):
+        for (A, a), (B, b) in pairwise(levelsdict.items()):
             if a == 0:  # first item is the root:
                 obj._parent[A] = None
                 obj._full[A] = A
@@ -173,14 +173,27 @@ class Tree:
 
     def __repr__(self) -> str:
         """Return string that can reconstruct the Tree."""
-        return f"Tree.from_levels({repr(self.levels())})"
+        return f"Tree.from_levels({repr(dict(self.levels()))})"
 
     def __str__(self):
-        """Return string with tree in indented list notation."""
-        indent = "| "
-        return "\n".join(
-            [level * indent + str(node) for node, level in self.levels().items()]
-        )
+        """Return tree as string using box drawing characters."""
+        indent = [""]
+        lines = []
+        for node, level in self.levels():
+            if level == 0:
+                # if node is root:
+                lines.append(str(node))
+            elif node == self.children(self.parent(node))[-1]:
+                # if node is a last child:
+                del indent[level:]
+                lines.append("".join([*indent, "└─", str(node)]))
+                indent.append("  ")
+            else:
+                # if node is a non-last child:
+                del indent[level:]
+                lines.append("".join([*indent, "├─", str(node)]))
+                indent.append("│ ")
+        return "\n".join(lines)
 
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
@@ -207,15 +220,14 @@ class Tree:
         self._root = new(self._root)
         return None
 
-    def levels(self):
-        """Return ordered dict of node:level pairs (root is zero level)."""
-        levels = {}
-        for node in self.subtree():
-            if self.is_nonroot(node):
-                levels[node] = 1 + levels[self.parent(node)]
-            else:
-                levels[node] = 0
-        return levels
+    def levels(self, localroot=None, level=0):
+        """Yield ordered sequence of (node, level) tuples (root is zero level)."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        yield (localroot, level)
+        for child in self.children(localroot):
+            yield from self.levels(child, level + 1)
 
     def root(self):
         """Return the root node of the Tree."""

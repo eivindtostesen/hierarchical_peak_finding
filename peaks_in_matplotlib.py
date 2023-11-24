@@ -157,7 +157,7 @@ class TreeMatPlotLib(ChainedAttributes):
         self.boundary_value = boundary_value
         self.slice_of_x = slice_of_x
         self.slice_of_y = slice_of_y
-        self.level = self.rootself.levels()
+        self.level = dict(self.rootself.levels())
         if not xlim:
             self.xlim = (
                 self.X[self.rootself.root().start],
