@@ -31,8 +31,20 @@ Created on Fri Dec 29 18:36:00 2023.
 
 import sys
 import argparse
+import csv
 from peaks_and_valleys import find_peaks, find_valleys, NumSlice
 from trees import Tree
+
+
+def _data_from_csv(args):
+    """Extract data from input."""
+    data = []
+    args.inputfile.reconfigure(newline="")
+    with args.inputfile as f:
+        reader = csv.reader(f, delimiter=args.delim, quoting=csv.QUOTE_NONE)
+        for row in reader:
+            data.append(float(row[args.field - 1]))
+    return data
 
 
 def _tree_of_peaks(data):
@@ -51,7 +63,7 @@ def _tree_of_valleys(data):
 
 # Define CLI with arguments and options:
 parser = argparse.ArgumentParser(
-    description="Print a tree of peak regions.",
+    description="Print a tree of peak regions. Regions are written in slice notation.",
     epilog="see also: https://github.com/eivindtostesen/hierarchical_peak_finding",
 )
 parser.add_argument(
@@ -60,6 +72,20 @@ parser.add_argument(
     type=argparse.FileType("r"),
     default=sys.stdin,
     help="a file or stdin to read data from",
+)
+parser.add_argument(
+    "-d",
+    "--delimiter",
+    default=" ",
+    dest="delim",
+    help="the delimiter used in inputfile",
+)
+parser.add_argument(
+    "-f",
+    "--field",
+    type=int,
+    default=1,
+    help="column number (count from 1) with data in inputfile",
 )
 parser.add_argument(
     "-v",
@@ -71,14 +97,8 @@ parser.add_argument(
     help="print valley regions instead of peak regions",
 )
 
+
 # Parse command-line arguments:
 args = parser.parse_args()
-
-# Extract data from input:
-datalist = []
-with args.inputfile as f:
-    for line in f:
-        datalist.append(float(line.strip()))
-
 # Compute and print tree:
-print(args.tree(datalist))
+print(args.tree(_data_from_csv(args)))
