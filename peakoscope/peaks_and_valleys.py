@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Python module for peaks and valleys in a numeric sequence.
 
@@ -9,7 +8,7 @@ Created on Thu Mar 30 16:31:00 2023
 """
 
 
-from utilities import pairwise
+from peakoscope.utilities import pairwise
 
 
 # Functions:

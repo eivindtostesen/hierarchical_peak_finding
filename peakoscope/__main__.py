@@ -1,25 +1,24 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Command Line Interface.
+
+The CLI is run by running the package (using the -m flag).
 
 Examples:
 
 Print peaks:  
-  $ python cli.py test.csv
-  $ cat test.csv | python cli.py -
-  $ cat test.csv | python cli.py
-  $ ./cli.py test.csv
-  $ cat test.csv | ./cli.py -
-  $ cat test.csv | ./cli.py
+  $ python -m peakoscope test.csv
+  $ cat test.csv | python -m peakoscope -
+  $ cat test.csv | python -m peakoscope
 
 Print valleys:
-  $ python cli.py --valleys test.csv
-  $ python cli.py -v test.csv
-  $ cat test.csv | python cli.py --valleys
-  $ cat test.csv | python cli.py -v
+  $ python -m peakoscope --valleys test.csv
+  $ python -m peakoscope -v test.csv
+  $ cat test.csv | python -m peakoscope --valleys
+  $ cat test.csv | python -m peakoscope -v
 
 Display help:
-  $ python cli.py --help
+  $ python -m peakoscope -h
+  $ python -m peakoscope --help
 
 
 Created on Fri Dec 29 18:36:00 2023.
@@ -32,8 +31,7 @@ Created on Fri Dec 29 18:36:00 2023.
 import sys
 import argparse
 import csv
-from peaks_and_valleys import find_peaks, find_valleys, NumSlice
-from trees import Tree
+import peakoscope
 
 
 def _data_from_csv(args):
@@ -49,20 +47,27 @@ def _data_from_csv(args):
 
 def _tree_of_peaks(data):
     """Find peaks in data and make tree."""
-    return Tree.from_peaks(
-        map(lambda t: NumSlice.from_start_end(*t[0:2], data), find_peaks(data))
+    return peakoscope.Tree.from_peaks(
+        map(
+            lambda t: peakoscope.NumSlice.from_start_end(*t[0:2], data),
+            peakoscope.find_peaks(data),
+        )
     )
 
 
 def _tree_of_valleys(data):
     """Find valleys in data and make tree."""
-    return Tree.from_valleys(
-        map(lambda t: NumSlice.from_start_end(*t[0:2], data), find_valleys(data))
+    return peakoscope.Tree.from_valleys(
+        map(
+            lambda t: peakoscope.NumSlice.from_start_end(*t[0:2], data),
+            peakoscope.find_valleys(data),
+        )
     )
 
 
 # Define CLI with arguments and options:
 parser = argparse.ArgumentParser(
+    prog="python -m peakoscope",
     description="Print a tree of peak regions. Regions are written in slice notation.",
     epilog="see also: https://github.com/eivindtostesen/hierarchical_peak_finding",
 )
