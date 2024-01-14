@@ -49,7 +49,7 @@ def _tree_of_peaks(data):
     """Find peaks in data and make tree."""
     return peakoscope.Tree.from_peaks(
         map(
-            lambda t: peakoscope.NumSlice.from_start_end(*t[0:2], data),
+            lambda t: peakoscope.Scope.from_start_end(*t[0:2], data),
             peakoscope.find_peaks(data),
         )
     )
@@ -59,7 +59,7 @@ def _tree_of_valleys(data):
     """Find valleys in data and make tree."""
     return peakoscope.Tree.from_valleys(
         map(
-            lambda t: peakoscope.NumSlice.from_start_end(*t[0:2], data),
+            lambda t: peakoscope.Scope.from_start_end(*t[0:2], data),
             peakoscope.find_valleys(data),
         )
     )

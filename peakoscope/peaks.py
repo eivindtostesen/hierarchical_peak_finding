@@ -48,7 +48,7 @@ def find_valleys(values):
 # Classes:
 
 
-class SliceStr(str):
+class Region(str):
     """String representing a slice object."""
 
     sep = ":"  # slice notation
@@ -79,7 +79,7 @@ class SliceStr(str):
 
     def __repr__(self) -> str:
         """Return string that can reconstruct the object."""
-        return f'SliceStr("{self}")'
+        return f'Region("{self}")'
 
     def __contains__(self, index):
         """Return True if index is in the slice."""
@@ -110,25 +110,25 @@ class SliceStr(str):
         return self >= other and self != other
 
 
-class NumSlice(SliceStr):
+class Scope(Region):
     """String representing a slice of a numeric sequence."""
 
     def __new__(cls, slicestr, values):
-        """Create slice string with a reference to a numeric sequence."""
+        """Create region with a reference to a numeric sequence."""
         self = super().__new__(cls, slicestr)
         self.values = values
         return self
 
     @classmethod
     def from_start_stop(cls, start, stop, values):
-        """Return NumSlice from start, stop integers and the sequence."""
+        """Return Scope from start, stop integers and the sequence."""
         self = super().__new__(cls, f"{start}:{stop}")
         self.values = values
         return self
 
     @classmethod
     def from_start_end(cls, start, end, values):
-        """Return NumSlice from start, end integers and the sequence."""
+        """Return Scope from start, end integers and the sequence."""
         self = super().__new__(cls, f"{start}:{end + 1}")
         self.values = values
         return self
@@ -151,7 +151,7 @@ class NumSlice(SliceStr):
             # Distance between maximum and minimum value:
             return self.max - self.min
         else:
-            # Attribute of SliceStr:
+            # Attribute of Region:
             return super().__getattr__(name)
 
     def __dir__(self):
@@ -173,7 +173,7 @@ class NumSlice(SliceStr):
 
     def __repr__(self) -> str:
         """Return string that can reconstruct the object."""
-        return f'NumSlice("{self}", Y)'
+        return f'Scope("{self}", Y)'
 
     def pre(self):
         """Return index of left neighbor if exists else None."""
