@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Python module for using polars in peak/valley analysis.
+"""Python module for using pandas in peak/valley analysis.
 
-Created on Sat Jan  7 16:30:46 2023
+Created on Sat Jan  7 16:29:38 2023
 
 @author: Eivind Tostesen
 
@@ -10,8 +9,8 @@ Created on Sat Jan  7 16:30:46 2023
 
 
 from itertools import chain
-import polars as pl
-from utilities import ChainedAttributes
+import pandas as pd
+from peakoscope.utilities import ChainedAttributes
 
 
 # Alias when None means "use default":
@@ -21,13 +20,13 @@ _default = None
 # Classes:
 
 
-class TreePolars(ChainedAttributes):
-    """Polars methods to be owned by a Tree."""
+class TreePandas(ChainedAttributes):
+    """Pandas methods to be owned by a Tree."""
 
     def __init__(
         self,
         tree,
-        attrname="polars",
+        attrname="pandas",
         X=None,
         objecttype=(
             "node root parent full core children main lateral"
@@ -37,7 +36,7 @@ class TreePolars(ChainedAttributes):
         ).split(),
         **kwargs,
     ):
-        """Attach this polars-aware object to a Tree."""
+        """Attach this pandas-aware object to a Tree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
         if X is None:
@@ -52,11 +51,12 @@ class TreePolars(ChainedAttributes):
             lambda n: self.rootself.main(n) if self.rootself.has_children(n) else None
         )
         for name in (
-            "parent full core is_nonroot has_children size max min _index"
+            "parent children lateral full core is_nonroot "
+            "has_children size max min _index"
         ).split():
             setattr(self, name, getattr(self.rootself, name))
         for name in (
-            "children lateral root_path core_path subtree main_descendants "
+            "root_path core_path subtree main_descendants "
             "lateral_descendants full_nodes leaf_nodes "
             "branch_nodes linear_nodes"
         ).split():
@@ -69,7 +69,7 @@ class TreePolars(ChainedAttributes):
         self.set_definitions(**kwargs)
 
     def set_definitions(self, **kwargs):
-        """Set attributes with functions."""
+        """Set attributes with functions, mappings or Series."""
         for name in kwargs:
             setattr(self, name, kwargs[name])
 
@@ -77,84 +77,63 @@ class TreePolars(ChainedAttributes):
         """Return series with one row per Tree node."""
         if filter is _default:
             filter = self.rootself
-        dtype = pl.Object if name in self.objecttype else None
-        return pl.Series(
-            name,
-            map(
+        dtype = "object" if name in self.objecttype else None
+        s = (
+            pd.Series(filter, dtype=dtype)
+            .map(
                 definitions[name] if name in definitions else getattr(self, name),
-                filter,
-            ),
-            dtype=dtype,
+                na_action="ignore",
+            )
+            .rename(name)
         )
+        if name not in self.objecttype:
+            s.convert_dtypes()
+        return s
 
     def dataframe(self, columns="node", filter=_default, *, definitions={}):
         """Return dataframe with one row per Tree node."""
         if filter is _default:
-            filter = iter(self.rootself)
+            filter = self.rootself
         nodes = list(iter(filter))
-        return pl.DataFrame().hstack(
+        return pd.concat(
             [
                 self.series(name, nodes, definitions=definitions)
                 for name in columns.split()
             ],
-            in_place=True,
+            axis=1,
         )
 
     def assign_columns(self, dataframe, columns="", *, definitions={}):
         """Assign extra columns to a given dataframe."""
-        return pl.concat(
-            [
-                dataframe,
-                self.dataframe(
-                    columns,
-                    filter=dataframe.get_column("node"),
-                    definitions=definitions,
-                ),
-            ],
-            how="horizontal",
+        return dataframe.assign(
+            **{
+                name: self.series(name, dataframe["node"], definitions=definitions)
+                for name in columns.split()
+            }
         )
 
     def sort(self, dataframe, by="_index", **kwargs):
         """Return sorted dataframe."""
-        return (
-            dataframe.pipe(
-                self.assign_columns,
-                columns="sorting_column",
-                definitions=dict(sorting_column=getattr(self, by)),
-            )
-            .sort("sorting_column", **kwargs)
-            .select([pl.exclude("sorting_column")])
+        return dataframe.sort_values(
+            by="node",
+            key=lambda col: col.map(getattr(self.rootself, by)),
+            ignore_index=True,
+            **kwargs,
         )
 
-    def sort_by_max_and_size(self, dataframe):
-        """Return dataframe sorted by max and size."""
-        return dataframe.pipe(self.sort, by="size", descending=True).pipe(
-            self.sort, by="max", descending=True
+    def sort_by_max_and_size(self, dataframe, **kwargs):
+        """Return dataframe sorted by descending max and size."""
+        return dataframe.pipe(self.sort, "size", ascending=False, **kwargs).pipe(
+            self.sort, "max", ascending=False, kind="stable", **kwargs
         )
 
     # Out-of-the-box dataframes:
 
     def dump_data_attributes(self):
         """Return a dump of the Tree's data attributes."""
-
-        def _listorscalar(data):
-            if type(data) is dict:
-                return [data[n] for n in self.rootself]
-            else:
-                return data
-
-        return pl.concat(
-            [
-                self.dataframe(),
-                pl.DataFrame(
-                    {
-                        n: _listorscalar(d)
-                        for n, d in self.rootself.as_dict_of_dicts().items()
-                    }
-                ),
-            ],
-            how="horizontal",
-        ).pipe(self.sort)
+        df = pd.DataFrame(self.rootself.as_dict_of_dicts())
+        df.index.name = "node"
+        return df.reset_index().convert_dtypes().pipe(self.sort)
 
     def tree_structure(self):
         """Return dataframe with topological attributes."""

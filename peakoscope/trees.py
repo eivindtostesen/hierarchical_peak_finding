@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Python module for trees of peak regions or valley regions.
 
@@ -18,7 +17,7 @@ Created on Wed Mar 24 14:49:04 2021.
 
 
 from operator import attrgetter
-from utilities import pairwise
+from peakoscope.utilities import pairwise
 
 
 # Functions:

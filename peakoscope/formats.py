@@ -1,4 +1,3 @@
-#!/usr/bin/env python3.
 # -*- coding: utf-8 -*-
 """Python module for string methods.
 
@@ -10,7 +9,7 @@ Created on Tue Oct 24 21:30:00 2023
 
 
 import pprint
-from utilities import ChainedAttributes
+from peakoscope.utilities import ChainedAttributes
 
 
 # Classes:

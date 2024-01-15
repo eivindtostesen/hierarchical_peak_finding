@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Python module for generating data sets.
 
@@ -12,7 +11,7 @@ Created on Mon Oct 11 09:34:12 2021
 import random
 import string
 from itertools import accumulate, chain
-from errors import PeakyBlunder
+from peakoscope.errors import PeakyBlunder
 
 
 # Random walks:

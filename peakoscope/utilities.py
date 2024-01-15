@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Python module containing tools and utilities.
 
@@ -11,7 +10,7 @@ Created on Thu Dec  1 15:48:10 2022
 """
 
 
-from errors import PeakyBlunder
+from peakoscope.errors import PeakyBlunder
 
 
 # Iteration tools:
@@ -74,7 +73,9 @@ class ChainedAttributes:
             attrname = str.lower(type(self).__name__)
 
         if self.parentself is not None:
-            raise PeakyBlunder(f"Attributed as '{self.attrname}'. Call method 'delattr' to break.")
+            raise PeakyBlunder(
+                f"Attributed as '{self.attrname}'. Call method 'delattr' to break."
+            )
         elif hasattr(obj, attrname):
             raise PeakyBlunder(f"The {attrname=} already exists.")
 

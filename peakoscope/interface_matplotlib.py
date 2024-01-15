@@ -1,4 +1,3 @@
-#!/usr/bin/env python3.
 # -*- coding: utf-8 -*-
 """Python module for visualizing peaks and valleys in matplotlib.
 
@@ -10,7 +9,7 @@ Created on Thu Dec  1 16:13:14 2022
 
 import matplotlib
 import matplotlib.pyplot as plt
-from utilities import ChainedAttributes
+from peakoscope.utilities import ChainedAttributes
 
 
 # Functions:
