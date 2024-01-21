@@ -5,6 +5,9 @@ The CLI is run by running the package (using the -m flag).
 
 Examples:
 
+Display version:
+  $ python -m peakoscope --version
+
 Print peaks:  
   $ python -m peakoscope test.csv
   $ cat test.csv | python -m peakoscope -
@@ -72,6 +75,9 @@ parser = argparse.ArgumentParser(
     epilog="see also: https://github.com/eivindtostesen/hierarchical_peak_finding",
 )
 parser.add_argument(
+    "--version", action="version", version="Peakoscope " + peakoscope.__version__
+)
+parser.add_argument(
     "inputfile",
     nargs="?",
     type=argparse.FileType("r"),
@@ -101,7 +107,6 @@ parser.add_argument(
     dest="tree",
     help="print valley regions instead of peak regions",
 )
-
 
 # Parse command-line arguments:
 args = parser.parse_args()

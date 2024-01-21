@@ -9,6 +9,8 @@ Created on Wed Jan 10 23:18:00 2024.
 
 """
 
+__version__ = "0.9.0"
+
 
 # Import names:
 from peakoscope.errors import PeakyBlunder
