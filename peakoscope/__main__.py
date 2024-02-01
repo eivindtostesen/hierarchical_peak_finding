@@ -38,7 +38,7 @@ import peakoscope
 
 
 def _data_from_csv(args):
-    """Extract data from input."""
+    """Return list with data from csv input."""
     data = []
     args.inputfile.reconfigure(newline="")
     with args.inputfile as f:
@@ -46,26 +46,6 @@ def _data_from_csv(args):
         for row in reader:
             data.append(float(row[args.field - 1]))
     return data
-
-
-def _tree_of_peaks(data):
-    """Find peaks in data and make tree."""
-    return peakoscope.Tree.from_peaks(
-        map(
-            lambda t: peakoscope.Scope.from_start_end(*t[0:2], data),
-            peakoscope.find_peaks(data),
-        )
-    )
-
-
-def _tree_of_valleys(data):
-    """Find valleys in data and make tree."""
-    return peakoscope.Tree.from_valleys(
-        map(
-            lambda t: peakoscope.Scope.from_start_end(*t[0:2], data),
-            peakoscope.find_valleys(data),
-        )
-    )
 
 
 # Define CLI with arguments and options:
@@ -101,14 +81,11 @@ parser.add_argument(
 parser.add_argument(
     "-v",
     "--valleys",
-    action="store_const",
-    const=_tree_of_valleys,
-    default=_tree_of_peaks,
-    dest="tree",
+    action="store_true",
     help="print valley regions instead of peak regions",
 )
 
 # Parse command-line arguments:
 args = parser.parse_args()
 # Compute and print tree:
-print(args.tree(_data_from_csv(args)))
+print(peakoscope.tree(_data_from_csv(args), valleys=args.valleys))
