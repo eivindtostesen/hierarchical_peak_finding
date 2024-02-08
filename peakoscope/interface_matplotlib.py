@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
+# This file is part of Peakoscope.
+# Copyright (C) 2021-2024  Eivind Tøstesen
+# Peakoscope is licensed under GPLv3.
 """Python module for visualizing peaks and valleys in matplotlib.
-
-Created on Thu Dec  1 16:13:14 2022
-
-@author: Eivind Tostesen
 
 """
 

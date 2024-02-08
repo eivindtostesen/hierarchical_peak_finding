@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+# This file is part of Peakoscope.
+# Copyright (C) 2021-2024  Eivind Tøstesen
+# Peakoscope is licensed under GPLv3.
 """Command Line Interface.
 
 The CLI is run by running the package (using the -m flag).
 
 Examples:
+---------
 
 Display version:
   $ python -m peakoscope --version
@@ -22,11 +26,6 @@ Print valleys:
 Display help:
   $ python -m peakoscope -h
   $ python -m peakoscope --help
-
-
-Created on Fri Dec 29 18:36:00 2023.
-
-@author: Eivind Tostesen
 
 """
 
@@ -52,7 +51,7 @@ def _data_from_csv(args):
 parser = argparse.ArgumentParser(
     prog="python -m peakoscope",
     description="Print a tree of peak regions. Regions are written in slice notation.",
-    epilog="see also: https://github.com/eivindtostesen/hierarchical_peak_finding",
+    epilog="software repository: https://github.com/eivindtostesen/hierarchical_peak_finding",
 )
 parser.add_argument(
     "--version", action="version", version="Peakoscope " + peakoscope.__version__

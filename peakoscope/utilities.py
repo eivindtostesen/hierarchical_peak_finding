@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
+# This file is part of Peakoscope.
+# Copyright (C) 2021-2024  Eivind Tøstesen
+# Peakoscope is licensed under GPLv3.
 """Python module containing tools and utilities.
-
-Requires Python 3.8+
-
-Created on Thu Dec  1 15:48:10 2022
-
-@author: Eivind Tostesen
 
 """
 

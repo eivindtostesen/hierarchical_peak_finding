@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
+# This file is part of Peakoscope.
+# Copyright (C) 2021-2024  Eivind Tøstesen
+# Peakoscope is licensed under GPLv3.
 """Peakoscope package.
 
 Peakoscope is a python package.
-
-Created on Wed Jan 10 23:18:00 2024.
-
-@author: Eivind Tostesen
 
 """
 

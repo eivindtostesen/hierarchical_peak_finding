@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
+# This file is part of Peakoscope.
+# Copyright (C) 2021-2024  Eivind Tøstesen
+# Peakoscope is licensed under GPLv3.
 """Python module for peaks and valleys in a numeric sequence.
-
-Created on Thu Mar 30 16:31:00 2023
-
-@author: Eivind Tostesen
 
 """
 

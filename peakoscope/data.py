@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
+# This file is part of Peakoscope.
+# Copyright (C) 2021-2024  Eivind Tøstesen
+# Peakoscope is licensed under GPLv3.
 """Python module for generating data sets.
 
-Requires Python 3.8+
-
-Created on Mon Oct 11 09:34:12 2021
-
-@author: Eivind Tostesen
 """
 
 import random

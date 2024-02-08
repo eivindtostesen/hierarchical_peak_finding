@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Python module for string methods.
-
-Created on Tue Oct 24 21:30:00 2023
-
-@author: Eivind Tostesen
+# This file is part of Peakoscope.
+# Copyright (C) 2021-2024  Eivind Tøstesen
+# Peakoscope is licensed under GPLv3.
+"""Python module for string/text methods and formats.
 
 """
 

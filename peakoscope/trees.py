@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# This file is part of Peakoscope.
+# Copyright (C) 2021-2024  Eivind Tøstesen
+# Peakoscope is licensed under GPLv3.
 """Python module for trees of peak regions or valley regions.
 
 This module contains algorithms for building trees that
@@ -6,12 +9,6 @@ represent the hierarchical nesting of regions and subregions
 containing peaks or valleys in numeric
 one-dimensional or higher-dimensional data.
 The tree classes provide methods for searching and selecting regions.
-
-Requires Python 3.7+
-
-Created on Wed Mar 24 14:49:04 2021.
-
-@author: Eivind Tostesen
 
 """
 
