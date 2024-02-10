@@ -1,0 +1,39 @@
+[build-system]
+requires      = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "peakoscope"
+requires-python = ">=3.8"
+dependencies = []
+authors = [
+  { name="Eivind Tøstesen", email="contact@tostesen.no" },
+]
+readme = "README.md"
+description = "Data analysis of peak and valley regions"
+keywords = ["peak", "valley", "time series", "random walk", "nested regions", "hierarchical"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = {attr = "peakoscope.__version__"}
+
+[project.optional-dependencies]
+matplotlib = ["matplotlib>=3.5.2"]
+pandas = ["pandas>=1.4.4"]
+polars = ["polars>=0.19.0"]
+
+[project.urls]
+Homepage = "https://github.com/eivindtostesen/hierarchical_peak_finding"
+Issues = "https://github.com/eivindtostesen/hierarchical_peak_finding/issues"
+
