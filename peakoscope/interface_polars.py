@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
+# This file is part of Peakoscope.
+# Copyright (C) 2021-2024  Eivind Tøstesen
+# Peakoscope is licensed under GPLv3.
 """Python module for using polars in peak/valley analysis.
-
-Created on Sat Jan  7 16:30:46 2023
-
-@author: Eivind Tostesen
 
 """
 
@@ -47,8 +46,8 @@ class TreePolars(ChainedAttributes):
             self.x_end = lambda n: X[n.end]
         self.node = lambda n: n
         self.root = lambda n: self.rootself.root()
-        self.main = (
-            lambda n: self.rootself.main(n) if self.rootself.has_children(n) else None
+        self.main = lambda n: (
+            self.rootself.main(n) if self.rootself.has_children(n) else None
         )
         for name in (
             "parent full core is_nonroot has_children size max min _index"

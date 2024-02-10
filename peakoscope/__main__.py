@@ -1,9 +1,16 @@
 # -*- coding: utf-8 -*-
+# This file is part of Peakoscope.
+# Copyright (C) 2021-2024  Eivind Tøstesen
+# Peakoscope is licensed under GPLv3.
 """Command Line Interface.
 
 The CLI is run by running the package (using the -m flag).
 
 Examples:
+---------
+
+Display version:
+  $ python -m peakoscope --version
 
 Print peaks:  
   $ python -m peakoscope test.csv
@@ -20,11 +27,6 @@ Display help:
   $ python -m peakoscope -h
   $ python -m peakoscope --help
 
-
-Created on Fri Dec 29 18:36:00 2023.
-
-@author: Eivind Tostesen
-
 """
 
 
@@ -35,7 +37,7 @@ import peakoscope
 
 
 def _data_from_csv(args):
-    """Extract data from input."""
+    """Return list with data from csv input."""
     data = []
     args.inputfile.reconfigure(newline="")
     with args.inputfile as f:
@@ -45,31 +47,14 @@ def _data_from_csv(args):
     return data
 
 
-def _tree_of_peaks(data):
-    """Find peaks in data and make tree."""
-    return peakoscope.Tree.from_peaks(
-        map(
-            lambda t: peakoscope.Scope.from_start_end(*t[0:2], data),
-            peakoscope.find_peaks(data),
-        )
-    )
-
-
-def _tree_of_valleys(data):
-    """Find valleys in data and make tree."""
-    return peakoscope.Tree.from_valleys(
-        map(
-            lambda t: peakoscope.Scope.from_start_end(*t[0:2], data),
-            peakoscope.find_valleys(data),
-        )
-    )
-
-
 # Define CLI with arguments and options:
 parser = argparse.ArgumentParser(
     prog="python -m peakoscope",
     description="Print a tree of peak regions. Regions are written in slice notation.",
-    epilog="see also: https://github.com/eivindtostesen/hierarchical_peak_finding",
+    epilog="software repository: https://github.com/eivindtostesen/hierarchical_peak_finding",
+)
+parser.add_argument(
+    "--version", action="version", version="Peakoscope " + peakoscope.__version__
 )
 parser.add_argument(
     "inputfile",
@@ -95,15 +80,11 @@ parser.add_argument(
 parser.add_argument(
     "-v",
     "--valleys",
-    action="store_const",
-    const=_tree_of_valleys,
-    default=_tree_of_peaks,
-    dest="tree",
+    action="store_true",
     help="print valley regions instead of peak regions",
 )
-
 
 # Parse command-line arguments:
 args = parser.parse_args()
 # Compute and print tree:
-print(args.tree(_data_from_csv(args)))
+print(peakoscope.tree(_data_from_csv(args), valleys=args.valleys))
