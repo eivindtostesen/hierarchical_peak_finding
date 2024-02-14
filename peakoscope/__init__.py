@@ -22,7 +22,7 @@ Compute the tree of nested peak regions in a data set:
 
 From the tree, select default peak regions and print their slice of data:
 
->>> for peak in tree(data).filter():
+>>> for peak in tree(data).size_filter():
 ...    print(data[peak.slice])
 ... 
 [80]
@@ -34,7 +34,7 @@ Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under GPL-3.
 """
 
 
-__version__ = "0.9.0"
+__version__ = "1.0.0.dev1"
 
 
 # Import names:

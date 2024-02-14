@@ -28,8 +28,8 @@ class TreePolars(ChainedAttributes):
         attrname="polars",
         X=None,
         objecttype=(
-            "node root parent full core children main lateral"
-            "root_path core_path subtree main_descendants "
+            "node root parent full tip children main_child lateral"
+            "root_path main_path subtree main_descendants "
             "lateral_descendants full_nodes leaf_nodes "
             "branch_nodes linear_nodes"
         ).split(),
@@ -46,15 +46,15 @@ class TreePolars(ChainedAttributes):
             self.x_end = lambda n: X[n.end]
         self.node = lambda n: n
         self.root = lambda n: self.rootself.root()
-        self.main = lambda n: (
-            self.rootself.main(n) if self.rootself.has_children(n) else None
+        self.main_child = lambda n: (
+            self.rootself.main_child(n) if self.rootself.has_children(n) else None
         )
         for name in (
-            "parent full core is_nonroot has_children size max min _index"
+            "parent full tip is_nonroot has_children size max min _index"
         ).split():
             setattr(self, name, getattr(self.rootself, name))
         for name in (
-            "children lateral root_path core_path subtree main_descendants "
+            "children lateral root_path main_path subtree main_descendants "
             "lateral_descendants full_nodes leaf_nodes "
             "branch_nodes linear_nodes"
         ).split():
@@ -157,7 +157,7 @@ class TreePolars(ChainedAttributes):
     def tree_structure(self):
         """Return dataframe with topological attributes."""
         return self.dataframe(
-            "core children node parent full root",
+            "tip children node parent full root",
             filter=chain.from_iterable(
                 self.rootself.path(node, self.rootself.full(node), self.rootself.parent)
                 for node in self.rootself.leaf_nodes()

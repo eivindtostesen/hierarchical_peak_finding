@@ -28,10 +28,10 @@ def tree_from_peaks(
     getmin=attrgetter("min"),
     getmax=attrgetter("max"),
 ):
-    """Return (parent, root, children, core) from peak regions having start, end, min, max."""
+    """Return (parent, root, children, tip) from peak regions having start, end, min, max."""
     parent = {}
     children = {}
-    core = {}
+    tip = {}
     in_spe = []
     if not presorted:
         peaks = list(peaks)
@@ -47,11 +47,11 @@ def tree_from_peaks(
         children[p].sort(key=getstart)
         children[p].sort(key=getmax, reverse=True)
         children[p] = tuple(children[p])
-        core[p] = core[children[p][0]] if children[p] else p
+        tip[p] = tip[children[p][0]] if children[p] else p
         in_spe.append(p)
     root = in_spe.pop()
     parent[root] = None
-    return parent, root, children, core
+    return parent, root, children, tip
 
 
 # Classes:
@@ -85,7 +85,7 @@ class Tree:
     def from_peaks(cls, peaks, **kwargs):
         """Return new Tree from iterable of peak regions."""
         obj = cls.__new__(cls)
-        obj._parent, obj._root, obj._children, obj._core = tree_from_peaks(
+        obj._parent, obj._root, obj._children, obj._tip = tree_from_peaks(
             peaks, **kwargs
         )
         obj._find_full()
@@ -103,7 +103,7 @@ class Tree:
     ):
         """Return new Tree from iterable of valley regions."""
         obj = cls.__new__(cls)
-        obj._parent, obj._root, obj._children, obj._core = tree_from_peaks(
+        obj._parent, obj._root, obj._children, obj._tip = tree_from_peaks(
             valleys,
             presorted=presorted,
             getstart=getstart,
@@ -118,15 +118,15 @@ class Tree:
     def from_levels(cls, levelsdict):
         """Return new Tree from other tree's levels-dict."""
 
-        def leaf_and_core(node):
+        def leaf_and_tip(node):
             children[node] = []
             for n in obj.path(node, obj._full[node], obj.parent):
-                obj._core[n] = node
+                obj._tip[n] = node
 
         obj = cls.__new__(cls)
         obj._parent = {}
         children = {}
-        obj._core = {}
+        obj._tip = {}
         obj._full = {}
         for (A, a), (B, b) in pairwise(levelsdict.items()):
             if a == 0:  # first item is the root:
@@ -141,10 +141,10 @@ class Tree:
                 del stack[b:]  # pop a slice
                 obj._full[B] = B
                 children[stack[-1]].append(B)  # B is a lateral child
-                leaf_and_core(A)  # A is a leaf and core
+                leaf_and_tip(A)  # A is a leaf and tip
             obj._parent[B] = stack[-1]
             stack.append(B)
-        leaf_and_core(B)  # the last B is a leaf and core
+        leaf_and_tip(B)  # the last B is a leaf and tip
         obj._children = {p: tuple(c) for p, c in children.items()}
         return obj
 
@@ -196,7 +196,7 @@ class Tree:
         return {
             "_parent": self._parent,
             "_children": self._children,
-            "_core": self._core,
+            "_tip": self._tip,
             "_full": self._full,
             "_root": self._root,
         }
@@ -207,7 +207,7 @@ class Tree:
         def new(node):
             return changes[node] if node in changes else node
 
-        self._core = dict((new(x), new(y)) for (x, y) in self._core.items())
+        self._tip = dict((new(x), new(y)) for (x, y) in self._tip.items())
         self._full = dict((new(x), new(y)) for (x, y) in self._full.items())
         self._parent = dict((new(x), new(y)) for (x, y) in self._parent.items())
         self._children = dict(
@@ -233,13 +233,13 @@ class Tree:
         """Return True if the given node has a parent."""
         return node != self._root
 
-    def core(self, node):
-        """Return the given node's core region (main leaf in subtree)."""
-        return self._core[node]
+    def tip(self, node):
+        """Return the smallest region with same extremum as the given node."""
+        return self._tip[node]
 
     def has_children(self, node):
         """Return True if the given node has sub regions."""
-        return node != self._core[node]
+        return node != self._tip[node]
 
     def max(self, node):
         """Return the max value in the given region."""
@@ -261,8 +261,8 @@ class Tree:
         """Return ordered tuple of children."""
         return self._children[node]
 
-    def main(self, node):
-        """Return the given node's main child (first in tuple)."""
+    def main_child(self, node):
+        """Return child node with same extremum as the given node."""
         return self.children(node)[0]
 
     def lateral(self, node):
@@ -270,7 +270,7 @@ class Tree:
         return self.children(node)[1:]
 
     def full(self, node):
-        """Return the largest region with same core as the given node."""
+        """Return the largest region with same extremum as the given node."""
         return self._full[node]
 
     def _index(self, node):
@@ -289,12 +289,12 @@ class Tree:
             yield climber
 
     def root_path(self, node):
-        """Yield nodes on the path from given node to its root."""
+        """Yield nodes on the parent path from given node to its root."""
         yield from self.path(node, self.root(), self.parent)
 
-    def core_path(self, node):
-        """Yield nodes on the path from given node to its core."""
-        yield from self.path(node, self.core(node), self.main)
+    def main_path(self, node):
+        """Yield nodes on the main child path from given node to its tip."""
+        yield from self.path(node, self.tip(node), self.main_child)
 
     def subtree(self, localroot=None):
         """Yield all nodes in the given subtree."""
@@ -306,17 +306,17 @@ class Tree:
             yield from self.subtree(child)
 
     def main_descendants(self, localroot=None):
-        """Yield main nodes in the given subtree."""
+        """Yield main child nodes in the given subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
         if self.has_children(localroot):
-            yield self.main(localroot)
+            yield self.main_child(localroot)
             for child in self.children(localroot):
                 yield from self.main_descendants(child)
 
     def lateral_descendants(self, localroot=None):
-        """Yield lateral nodes in the given subtree."""
+        """Yield lateral child nodes in the given subtree."""
         # defaults:
         if localroot is None:
             localroot = self.root()
@@ -361,7 +361,7 @@ class Tree:
             node for node in self.subtree(localroot) if len(self.children(node)) == 1
         )
 
-    def filter(self, *, maxsize=None, localroot=None):
+    def size_filter(self, *, maxsize=None, localroot=None):
         """Yield subtree nodes filtered by size."""
         # defaults:
         if localroot is None:
@@ -372,14 +372,14 @@ class Tree:
         if self.size(localroot) < maxsize:
             yield localroot
         else:
-            climber = self.core(localroot)
+            climber = self.tip(localroot)
             while self.size(self.parent(climber)) < maxsize:
                 climber = self.parent(climber)
             yield climber
             while climber != localroot:
                 climber = self.parent(climber)
                 for child in self.lateral(climber):
-                    yield from self.filter(maxsize=maxsize, localroot=child)
+                    yield from self.size_filter(maxsize=maxsize, localroot=child)
 
     def innermost(self, nodes, localroot=None):
         """Yield innermost nodes of the given nodes."""
@@ -429,7 +429,7 @@ class Tree:
             yield from self.lateral_descendants()
 
         self._full = {
-            node: full for full in fullnodes() for node in self.core_path(full)
+            node: full for full in fullnodes() for node in self.main_path(full)
         }
 
 
@@ -495,10 +495,10 @@ class HyperTree(Tree):
         a, b = node
         return self.L.is_nonroot(a) or self.R.is_nonroot(b)
 
-    def core(self, node):
-        """Return the given node's core (main leaf node)."""
+    def tip(self, node):
+        """Return the given node's tip node."""
         a, b = node
-        return (self.L.core(a), self.R.core(b))
+        return (self.L.tip(a), self.R.tip(b))
 
     def has_children(self, node):
         """Return True if given node has children."""
@@ -542,22 +542,22 @@ class HyperTree(Tree):
                 (ca, cb) for ca in self.L.children(a) for cb in self.R.children(b)
             )
 
-    def main(self, node):
-        """Return the main child (the child that has the same core)."""
+    def main_child(self, node):
+        """Return the main child (the child that has the same tip)."""
         a, b = node
         if self.L.size(a) > self.R.size(b):
-            return (self.L.main(a), b)
+            return (self.L.main_child(a), b)
         elif self.L.size(a) < self.R.size(b):
-            return (a, self.R.main(b))
+            return (a, self.R.main_child(b))
         elif self.L.size(a) == self.R.size(b):
-            return (self.L.main(a), self.R.main(b))
+            return (self.L.main_child(a), self.R.main_child(b))
 
     def full(self, node):
-        """Return the largest node with same core as given node."""
+        """Return the largest node with same tip as given node."""
         climber = node
         while self.is_nonroot(climber):
             nextstep = self.parent(climber)
-            if self.core(nextstep) == self.core(climber):
+            if self.tip(nextstep) == self.tip(climber):
                 climber = nextstep
             else:
                 break
@@ -574,7 +574,7 @@ class HyperTree(Tree):
             for b in self.R.leaf_nodes():
                 yield a, b
 
-    def filter(self, *, maxsize=None, localroot=None):
+    def size_filter(self, *, maxsize=None, localroot=None):
         """Yield grid nodes in given subtree."""
         # defaults:
         if localroot is None:
@@ -582,8 +582,8 @@ class HyperTree(Tree):
         if maxsize is None:
             maxsize = 0.2 * max(self.L.size(self.L.root()), self.R.size(self.R.root()))
         ra, rb = localroot
-        for a in self.L.filter(maxsize=maxsize, localroot=ra):
-            for b in self.R.filter(maxsize=maxsize, localroot=rb):
+        for a in self.L.size_filter(maxsize=maxsize, localroot=ra):
+            for b in self.R.size_filter(maxsize=maxsize, localroot=rb):
                 yield a, b
 
     def from_peaks(self):

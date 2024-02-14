@@ -58,7 +58,9 @@ class TreeStrings(ChainedAttributes):
             if not self.rootself.has_children(full):
                 continue
             for node in self.rootself.path(
-                self.rootself.core(full), self.rootself.main(full), self.rootself.parent
+                self.rootself.tip(full),
+                self.rootself.main_child(full),
+                self.rootself.parent,
             ):
                 string += f"{node}"
                 if len(self.rootself.children(self.rootself.parent(node))) == 2:
