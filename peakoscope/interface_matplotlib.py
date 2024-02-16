@@ -61,36 +61,6 @@ def add_bounding_box(
     )
 
 
-def add_pedestal(
-    ax,
-    x1,
-    x2,
-    y2,
-    *,
-    y1=0,
-    fill=True,
-    linewidth=1,
-    edgecolor="C4",
-    facecolor="gold",
-    alpha=0.6,
-    **kwargs
-):
-    """Plot a pedestal (below a bounding box)."""
-    ax.add_patch(
-        matplotlib.patches.Rectangle(
-            xy=(x1, y1),
-            width=x2 - x1,
-            height=y2 - y1,
-            fill=fill,
-            linewidth=linewidth,
-            edgecolor=edgecolor,
-            facecolor=facecolor,
-            alpha=alpha,
-            **kwargs,
-        )
-    )
-
-
 def add_crown(ax, xslice, yslice, y1, *, facecolor="gold", alpha=0.9, **kwargs):
     """Color the area of a peak or valley."""
     ax.fill_between(
@@ -175,7 +145,7 @@ class TreeMatPlotLib(ChainedAttributes):
             self.boundary_value = {n: n.boundary_value() for n in self.rootself}
         plt.style.use("fast")
 
-    def new(self, figsize=(10.0, 4.0)):
+    def new(self, *, figsize=(10.0, 4.0)):
         """Initialize new figure and axes."""
         self.fig = plt.figure(figsize=figsize)
         self.ax = self.fig.add_axes([0.1, 0.1, 1, 1])

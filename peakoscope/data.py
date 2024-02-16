@@ -16,6 +16,7 @@ from peakoscope.errors import PeakyBlunder
 
 
 def discrete_steps(
+    *,
     length=10,
     moves=[1, -1],
     weights=None,
@@ -27,6 +28,7 @@ def discrete_steps(
 
 
 def continuous_steps(
+    *,
     length=10,
     moves=[1, -1],
     weights=None,
@@ -49,6 +51,7 @@ def alternating_steps(
 
 
 def randomwalk(
+    *,
     start=0,
     steps=discrete_steps(length=100, moves=[2, 1, 0, -1, -2]),
 ):

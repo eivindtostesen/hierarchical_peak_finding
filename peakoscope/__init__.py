@@ -34,7 +34,7 @@ Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under GPL-3.
 """
 
 
-__version__ = "1.0.0.dev1"
+__version__ = "1.0.0.dev2"
 
 
 # Import names:
@@ -47,7 +47,7 @@ from peakoscope.data import example_1, example_2
 
 
 # Wrapper function:
-def tree(data, valleys=False):
+def tree(data, *, valleys=False):
     """Find all peaks (or valleys) in data and return their Tree."""
     if valleys:
         return Tree.from_valleys(

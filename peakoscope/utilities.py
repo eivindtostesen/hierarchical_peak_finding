@@ -13,12 +13,6 @@ from peakoscope.errors import PeakyBlunder
 # Iteration tools:
 
 
-def forward_backward(iterable):
-    """Return pair of iterators: (forward, backward)."""
-    data = list(iterable)
-    return iter(data), reversed(data)
-
-
 def pairwise(iterable):
     """Yield nearest neighbor pairs."""
     it = iter(iterable)
@@ -26,30 +20,6 @@ def pairwise(iterable):
     for b in it:
         yield a, b
         a = b
-
-
-def tripletwise(iterable):
-    """Yield nearest neighbor triplets."""
-    it = iter(iterable)
-    a, b = next(it), next(it)
-    for c in it:
-        yield a, b, c
-        a, b = b, c
-
-
-def filter_local_extrema(datapoints):
-    """Let only maxima/minima pass from a stream of points."""
-    previous = None
-    for (x1, e1), (x2, e2) in pairwise(datapoints):
-        if e1 == e2:
-            continue
-        is_uphill = e2 > e1
-        if is_uphill == previous:
-            continue
-        yield x1, e1
-        previous = is_uphill
-    else:
-        yield x2, e2
 
 
 # Classes:

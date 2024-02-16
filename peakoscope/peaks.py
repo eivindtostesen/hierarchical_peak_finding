@@ -102,11 +102,11 @@ class Region(str):
 
     def __lt__(self, other) -> bool:
         """Return True if set(self) < set(other)."""
-        return self <= other and self != other
+        return self <= other and (other.start != self.start or self.stop != other.stop)
 
     def __gt__(self, other) -> bool:
         """Return True if set(self) > set(other)."""
-        return self >= other and self != other
+        return self >= other and (other.start != self.start or self.stop != other.stop)
 
 
 class Scope(Region):

@@ -22,6 +22,7 @@ from peakoscope.utilities import pairwise
 
 def tree_from_peaks(
     peaks,
+    *,
     presorted=True,
     getstart=attrgetter("start"),
     getend=attrgetter("end"),
@@ -95,6 +96,7 @@ class Tree:
     def from_valleys(
         cls,
         valleys,
+        *,
         presorted=True,
         getstart=attrgetter("start"),
         getend=attrgetter("end"),
@@ -115,7 +117,7 @@ class Tree:
         return obj
 
     @classmethod
-    def from_levels(cls, levelsdict):
+    def from_levels(cls, levelsdict, /):
         """Return new Tree from other tree's levels-dict."""
 
         def leaf_and_tip(node):
@@ -555,12 +557,10 @@ class HyperTree(Tree):
     def full(self, node):
         """Return the largest node with same tip as given node."""
         climber = node
-        while self.is_nonroot(climber):
-            nextstep = self.parent(climber)
-            if self.tip(nextstep) == self.tip(climber):
-                climber = nextstep
-            else:
-                break
+        while self.is_nonroot(climber) and self.tip(climber) == self.tip(
+            nextstep := self.parent(climber)
+        ):
+            climber = nextstep
         return climber
 
     def _index(self, node):
