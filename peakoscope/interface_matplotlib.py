@@ -129,7 +129,7 @@ class TreeMatPlotLib(ChainedAttributes):
         if not xlim:
             self.xlim = (
                 self.X[self.rootself.root().start],
-                self.X[self.rootself.root().end],
+                self.X[self.rootself.root().istop],
             )
         if not ylim:
             self.ylim = (self.rootself.root().min, self.rootself.root().max)
@@ -137,7 +137,7 @@ class TreeMatPlotLib(ChainedAttributes):
             self.xy = {n: (self.X[n.argmax], n.min) for n in self.rootself}
         if not xinterval:
             self.xinterval = {
-                n: (self.X[n.start], self.X[n.end]) for n in self.rootself
+                n: (self.X[n.start], self.X[n.istop]) for n in self.rootself
             }
         if not yinterval:
             self.yinterval = {n: (n.min, n.max) for n in self.rootself}

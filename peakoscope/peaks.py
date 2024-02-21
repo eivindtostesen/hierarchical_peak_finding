@@ -7,48 +7,62 @@
 """
 
 
+from collections import namedtuple
+from operator import lt, gt, le, ge
 from peakoscope.utilities import pairwise
 
 
 # Functions:
 
 
-def find_peaks(values):
-    """Yield peak regions as (start, end, min, max) tuples."""
+def find_peaks(values, reverse=False):
+    """Yield peak regions as (start, istop, argext, argcut, extremum, cutoff) Pose tuples."""
+    if not reverse:
+        lessthan, greaterthan, greater_equal = lt, gt, ge
+    else:
+        lessthan, greaterthan, greater_equal = gt, lt, le
     regions = []
     for i, (y1, y2) in enumerate(pairwise(values)):
         if i == 0:  # first data point:
-            regions.append([i, None, y1, y1])
-        if y2 > y1:  # if uphill:
+            regions.append([i, None, i, i, y1, y1])
+        if greaterthan(y2, y1):  # if uphill:
             for r in reversed(regions):
-                if r[3] >= y2:
+                if greater_equal(r[4], y2):
                     break
-                r[3] = y2  # update max value
-            regions.append([i + 1, None, y2, y2])
+                r[2], r[4] = i + 1, y2  # update argext and extremum value
+            regions.append([i + 1, None, i + 1, i + 1, y2, y2])
         elif y2 == y1:
             pass  # region already created
-        elif y2 < y1:  # if downhill:
-            while regions and y2 < regions[-1][2]:
+        elif lessthan(y2, y1):  # if downhill:
+            while regions and lessthan(y2, regions[-1][5]):
                 popped = regions.pop()
-                popped[1] = i  # update end value
-                yield tuple(popped)
-            if not (regions and y2 == regions[-1][2]):
-                regions.append([popped[0], None, y2, popped[3]])
+                popped[1] = i  # update istop value
+                yield Pose(*popped)
+            if not (regions and y2 == regions[-1][5]):
+                regions.append([popped[0], None, popped[2], i + 1, popped[4], y2])
     for r in reversed(regions):
         r[1] = i + 1  # use last i value
-        yield tuple(r)
+        yield Pose(*r)
 
 
 def find_valleys(values):
-    """Yield valley regions as (start, end, min, max) tuples."""
-    yield from map(lambda t: (t[0], t[1], -t[3], -t[2]), find_peaks(-y for y in values))
+    """Yield valley regions as (start, istop, argext, argcut, extremum, cutoff) Pose tuples."""
+    yield from find_peaks(values, reverse=True)
 
 
 # Classes:
 
 
+Pose = namedtuple(
+    "Pose",
+    # A pose encodes the position and orientation of a peak or valley region:
+    "start, istop, argext, argcut, extremum, cutoff",
+    defaults=(None, None, None, None),
+)
+
+
 class Region(str):
-    """String representing a slice object."""
+    """String representing a subarray."""
 
     sep = ":"  # slice notation
 
@@ -66,7 +80,7 @@ class Region(str):
         elif name == "stop":
             # The stop as integer:
             return self.slice.stop
-        elif name == "end":
+        elif name == "istop":
             # The index of the last item:
             return self.stop - 1
         else:
@@ -74,22 +88,22 @@ class Region(str):
 
     def __dir__(self):
         """Return list of attribute names."""
-        return ["slice", "tuple", "start", "stop", "end"]
+        return ["slice", "tuple", "start", "stop", "istop"]
 
     def __repr__(self) -> str:
         """Return string that can reconstruct the object."""
         return f'Region("{self}")'
 
     def __contains__(self, index):
-        """Return True if index is in the slice."""
+        """Return True if index is in the region."""
         return self.start <= index < self.stop
 
     def __len__(self):
-        """Return number of items in the slice."""
+        """Return number of items in the subarray."""
         return self.stop - self.start
 
     def __iter__(self):
-        """Yield indices in the slice."""
+        """Yield indices in the region."""
         yield from range(*self.tuple)
 
     def __le__(self, other) -> bool:
@@ -110,7 +124,7 @@ class Region(str):
 
 
 class Scope(Region):
-    """String representing a slice of a numeric sequence."""
+    """String representing a subarray of a numeric sequence."""
 
     def __new__(cls, slicestr, values):
         """Create region with a reference to a numeric sequence."""
@@ -126,31 +140,31 @@ class Scope(Region):
         return self
 
     @classmethod
-    def from_start_end(cls, start, end, values):
-        """Return Scope from start, end integers and the sequence."""
-        self = super().__new__(cls, f"{start}:{end + 1}")
+    def from_start_istop(cls, start, istop, values):
+        """Return Scope from start, istop integers and the sequence."""
+        self = super().__new__(cls, f"{start}:{istop + 1}")
         self.values = values
         return self
 
     def __getattr__(self, name):
         """Get attribute."""
         if name == "max":
-            # Maximum value in the slice of values:
+            # Maximum value in the subarray of values:
             return max(self.values[self.slice])
         if name == "min":
-            # Minimum value in the slice of values:
+            # Minimum value in the subarray of values:
             return min(self.values[self.slice])
         if name == "argmax":
-            # Index of (the first) maximum value in the slice:
+            # Index of (the first) maximum value in the region:
             return self.values.index(self.max, *self.tuple)
         if name == "argmin":
-            # Index of (the first) minimum value in the slice:
+            # Index of (the first) minimum value in the region:
             return self.values.index(self.min, *self.tuple)
         if name == "size":
             # Distance between maximum and minimum value:
             return self.max - self.min
         else:
-            # Attribute of Region:
+            # Attribute of Region class:
             return super().__getattr__(name)
 
     def __dir__(self):
@@ -184,28 +198,28 @@ class Scope(Region):
     def post(self):
         """Return index of right neighbor if exists else None."""
         if self.stop < len(self.values):
-            return self.end + 1
+            return self.istop + 1
         else:
             return None
 
     def is_peak(self):
-        """Return True if slice of values is a peak."""
+        """Return True if region is a peak."""
         return (self.pre() is None or self.values[self.pre()] < self.min) and (
             self.post() is None or self.values[self.post()] < self.min
         )
 
     def is_valley(self):
-        """Return True if slice of values is a valley."""
+        """Return True if region is a valley."""
         return (self.pre() is None or self.values[self.pre()] > self.max) and (
             self.post() is None or self.values[self.post()] > self.max
         )
 
     def is_local_maximum(self):
-        """Return True if slice of values is a local maximum."""
+        """Return True if region is a local maximum."""
         return self.size == 0 and self.is_peak()
 
     def is_local_minimum(self):
-        """Return True if slice of values is a local minimum."""
+        """Return True if region is a local minimum."""
         return self.size == 0 and self.is_valley()
 
     def boundary_value(self):

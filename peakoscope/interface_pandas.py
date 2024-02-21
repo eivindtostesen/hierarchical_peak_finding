@@ -40,10 +40,10 @@ class TreePandas(ChainedAttributes):
         self.setattr(obj=tree, attrname=attrname)
         if X is None:
             self.x_start = lambda n: n.start
-            self.x_end = lambda n: n.end
+            self.x_end = lambda n: n.istop
         else:
             self.x_start = lambda n: X[n.start]
-            self.x_end = lambda n: X[n.end]
+            self.x_end = lambda n: X[n.istop]
         self.node = lambda n: n
         self.root = lambda n: self.rootself.root()
         self.main_child = lambda n: (

@@ -25,11 +25,11 @@ def tree_from_peaks(
     *,
     presorted=True,
     getstart=attrgetter("start"),
-    getend=attrgetter("end"),
+    getistop=attrgetter("istop"),
     getmin=attrgetter("min"),
     getmax=attrgetter("max"),
 ):
-    """Return (parent, root, children, tip) from peak regions having start, end, min, max."""
+    """Return (parent, root, children, tip) from peak regions having start, istop, min, max."""
     parent = {}
     children = {}
     tip = {}
@@ -38,7 +38,7 @@ def tree_from_peaks(
         peaks = list(peaks)
         # Order same as given by 'find_peaks' function:
         peaks.sort(key=getmin, reverse=True)
-        peaks.sort(key=getend)
+        peaks.sort(key=getistop)
     for p in peaks:
         children[p] = []
         while in_spe and getstart(p) <= getstart(in_spe[-1]):
@@ -66,7 +66,7 @@ class Tree:
     a time series, a function y(x) or other univariate data.
 
     A Tree is initialized with an iterable of regions
-    that have start, end, min, max. The regions
+    that have start, istop, min, max. The regions
     must be unique hashable objects to be used as dictionary keys.
 
     Notes
@@ -99,7 +99,7 @@ class Tree:
         *,
         presorted=True,
         getstart=attrgetter("start"),
-        getend=attrgetter("end"),
+        getistop=attrgetter("istop"),
         getmin=lambda p: -p.max,
         getmax=lambda p: -p.min,
     ):
@@ -109,7 +109,7 @@ class Tree:
             valleys,
             presorted=presorted,
             getstart=getstart,
-            getend=getend,
+            getistop=getistop,
             getmin=getmin,
             getmax=getmax,
         )
@@ -282,11 +282,11 @@ class Tree:
 
     # public recursive algorithms:
 
-    def path(self, start, stop, step):
+    def path(self, start, istop, step):
         """Yield nodes on a path in the tree."""
         climber = start
         yield climber
-        while climber != stop:
+        while climber != istop:
             climber = step(climber)
             yield climber
 

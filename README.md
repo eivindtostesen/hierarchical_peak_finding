@@ -32,7 +32,7 @@ Compute the tree of nested peak regions in a data set:
 └─1:4
   └─2:3
 ```
-From the tree, select default peak regions and print their slice of data:
+From the tree, select default peak regions and print their subarray of data:
 ```python
 >>> for peak in peakoscope.tree(data).size_filter():
 ...    print(data[peak.slice])
