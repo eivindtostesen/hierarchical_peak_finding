@@ -2,7 +2,7 @@
 # This file is part of Peakoscope.
 # Copyright (C) 2021-2024  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
-"""Python module for peaks and valleys in a numeric sequence.
+"""Python module for peak and valley regions in a numeric sequence.
 
 """
 
@@ -62,9 +62,29 @@ Pose = namedtuple(
 
 
 class Region(str):
-    """String representing a subarray."""
+    """String representing a region in a numeric sequence."""
 
     sep = ":"  # slice notation
+
+    def __new__(cls, slicestr, values):
+        """Create region with a reference to a numeric sequence."""
+        self = super().__new__(cls, slicestr)
+        self.values = values
+        return self
+
+    @classmethod
+    def from_start_stop(cls, start, stop, values):
+        """Return Region from (start, stop) integers and the sequence."""
+        self = super().__new__(cls, f"{start}:{stop}")
+        self.values = values
+        return self
+
+    @classmethod
+    def from_start_istop(cls, start, istop, values):
+        """Return Region from (start, istop) integers and the sequence."""
+        self = super().__new__(cls, f"{start}:{istop + 1}")
+        self.values = values
+        return self
 
     def __getattr__(self, name):
         """Get attribute."""
@@ -75,31 +95,64 @@ class Region(str):
             # Tuple of integers (start, stop):
             return tuple(map(int, self.split(self.sep)))
         elif name == "start":
-            # The start as integer:
+            # The start integer position:
             return self.slice.start
         elif name == "stop":
-            # The stop as integer:
+            # The (exclusive) stop integer position:
             return self.slice.stop
         elif name == "istop":
             # The index of the last item:
             return self.stop - 1
+        if name == "max":
+            # Maximum value in the region:
+            return max(self.values[self.slice])
+        if name == "min":
+            # Minimum value in the region:
+            return min(self.values[self.slice])
+        if name == "argmax":
+            # Index of (the first) maximum value in the region:
+            return self.values.index(self.max, *self.tuple)
+        if name == "argmin":
+            # Index of (the first) minimum value in the region:
+            return self.values.index(self.min, *self.tuple)
+        if name == "size":
+            # Distance between maximum and minimum value:
+            return self.max - self.min
         else:
             raise AttributeError()
 
     def __dir__(self):
-        """Return list of attribute names."""
-        return ["slice", "tuple", "start", "stop", "istop"]
+        """Return list of attribute/method names."""
+        return [
+            "slice",
+            "tuple",
+            "start",
+            "stop",
+            "istop",
+            "values",
+            "max",
+            "min",
+            "argmax",
+            "argmin",
+            "size",
+            "pre",
+            "post",
+            "is_peak",
+            "is_valley",
+            "is_local_maximum",
+            "is_local_minimum",
+        ]
 
     def __repr__(self) -> str:
         """Return string that can reconstruct the object."""
-        return f'Region("{self}")'
+        return f'Region("{self}", _)'
 
     def __contains__(self, index):
         """Return True if index is in the region."""
         return self.start <= index < self.stop
 
     def __len__(self):
-        """Return number of items in the subarray."""
+        """Return number of items in the region."""
         return self.stop - self.start
 
     def __iter__(self):
@@ -121,72 +174,6 @@ class Region(str):
     def __gt__(self, other) -> bool:
         """Return True if set(self) > set(other)."""
         return self >= other and (other.start != self.start or self.stop != other.stop)
-
-
-class Scope(Region):
-    """String representing a subarray of a numeric sequence."""
-
-    def __new__(cls, slicestr, values):
-        """Create region with a reference to a numeric sequence."""
-        self = super().__new__(cls, slicestr)
-        self.values = values
-        return self
-
-    @classmethod
-    def from_start_stop(cls, start, stop, values):
-        """Return Scope from start, stop integers and the sequence."""
-        self = super().__new__(cls, f"{start}:{stop}")
-        self.values = values
-        return self
-
-    @classmethod
-    def from_start_istop(cls, start, istop, values):
-        """Return Scope from start, istop integers and the sequence."""
-        self = super().__new__(cls, f"{start}:{istop + 1}")
-        self.values = values
-        return self
-
-    def __getattr__(self, name):
-        """Get attribute."""
-        if name == "max":
-            # Maximum value in the subarray of values:
-            return max(self.values[self.slice])
-        if name == "min":
-            # Minimum value in the subarray of values:
-            return min(self.values[self.slice])
-        if name == "argmax":
-            # Index of (the first) maximum value in the region:
-            return self.values.index(self.max, *self.tuple)
-        if name == "argmin":
-            # Index of (the first) minimum value in the region:
-            return self.values.index(self.min, *self.tuple)
-        if name == "size":
-            # Distance between maximum and minimum value:
-            return self.max - self.min
-        else:
-            # Attribute of Region class:
-            return super().__getattr__(name)
-
-    def __dir__(self):
-        """Return list of attribute names."""
-        return super().__dir__() + [
-            "values",
-            "max",
-            "min",
-            "argmax",
-            "argmin",
-            "size",
-            "pre",
-            "post",
-            "is_peak",
-            "is_valley",
-            "is_local_maximum",
-            "is_local_minimum",
-        ]
-
-    def __repr__(self) -> str:
-        """Return string that can reconstruct the object."""
-        return f'Scope("{self}", Y)'
 
     def pre(self):
         """Return index of left neighbor if exists else None."""
@@ -221,6 +208,20 @@ class Scope(Region):
     def is_local_minimum(self):
         """Return True if region is a local minimum."""
         return self.size == 0 and self.is_valley()
+
+
+class Scope(Region):
+    """String representing a peak region or valley region."""
+
+    def __dir__(self):
+        """Return list of attribute/method names."""
+        return super().__dir__() + [
+            "boundary_value",
+        ]
+
+    def __repr__(self) -> str:
+        """Return string that can reconstruct the object."""
+        return f'Scope("{self}", _)'
 
     def boundary_value(self):
         """Return peak's min or valley's max or None."""

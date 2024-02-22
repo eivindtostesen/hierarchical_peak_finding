@@ -20,7 +20,7 @@ Compute the tree of nested peak regions in a data set:
 └─1:4
   └─2:3
 
-From the tree, select default peak regions and print their subarray of data:
+From the tree, select default peak regions and print their subarrays of data:
 
 >>> for peak in tree(data).size_filter():
 ...    print(data[peak.slice])
@@ -34,7 +34,7 @@ Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under GPL-3.
 """
 
 
-__version__ = "1.0.0.dev3"
+__version__ = "1.0.0.dev4"
 
 
 # Import names:
