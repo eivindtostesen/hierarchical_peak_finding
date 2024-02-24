@@ -2,7 +2,41 @@
 # This file is part of Peakoscope.
 # Copyright (C) 2021-2024  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
-"""Python module for peak and valley regions in a numeric sequence.
+"""Python module for peak/valley and other regions in a numeric sequence.
+
+The function find_peaks goes through an iterable of numbers
+in one pass yielding all peak regions as they are found.
+The function find_valleys is the reverse mode of find_peaks.
+
+A Region object represents any region in a sequence of numbers.
+It is stored as start:stop positions and the sequence reference.
+
+A Scope object represents a peak or valley region in a numeric sequence.
+It is derived from the Region class, but in addition to start and stop,
+it stores the positions argext and argcut.
+
+'argext' is the (first) position of the 'extremum', defined as the
+maximum in a peak region or the minimum in a valley region.
+
+'argcut' is the (first) position of the 'cutoff', defined as the
+minimum in a peak region or the maximum in a valley region.
+
+Usage examples:
+---------------
+
+Find all peak regions in a data set:
+
+>>> data = [10, 30, 40, 30, 10, 50, 70, 70, 50, 80]
+>>> for p in find_peaks(data):
+...     print(Pose(*p))
+... 
+Pose(start=2, istop=2, argext=2, argcut=2, extremum=40, cutoff=40)
+Pose(start=1, istop=3, argext=2, argcut=1, extremum=40, cutoff=30)
+Pose(start=6, istop=7, argext=6, argcut=6, extremum=70, cutoff=70)
+Pose(start=9, istop=9, argext=9, argcut=9, extremum=80, cutoff=80)
+Pose(start=5, istop=9, argext=9, argcut=5, extremum=80, cutoff=50)
+Pose(start=0, istop=9, argext=9, argcut=0, extremum=80, cutoff=10)
+
 
 """
 
@@ -16,7 +50,7 @@ from peakoscope.utilities import pairwise
 
 
 def find_peaks(values, reverse=False):
-    """Yield peak regions as (start, istop, argext, argcut, extremum, cutoff) Pose tuples."""
+    """Yield peak regions as tuples: (start, istop, argext, argcut, extremum, cutoff)."""
     if not reverse:
         lessthan, greaterthan, greater_equal = lt, gt, ge
     else:
@@ -37,16 +71,16 @@ def find_peaks(values, reverse=False):
             while regions and lessthan(y2, regions[-1][5]):
                 popped = regions.pop()
                 popped[1] = i  # update istop value
-                yield Pose(*popped)
+                yield popped
             if not (regions and y2 == regions[-1][5]):
                 regions.append([popped[0], None, popped[2], i + 1, popped[4], y2])
     for r in reversed(regions):
         r[1] = i + 1  # use last i value
-        yield Pose(*r)
+        yield r
 
 
 def find_valleys(values):
-    """Yield valley regions as (start, istop, argext, argcut, extremum, cutoff) Pose tuples."""
+    """Yield valley regions as tuples: (start, istop, argext, argcut, extremum, cutoff)."""
     yield from find_peaks(values, reverse=True)
 
 
@@ -73,49 +107,34 @@ class Region(str):
         return self
 
     @classmethod
-    def from_start_stop(cls, start, stop, values):
-        """Return Region from (start, stop) integers and the sequence."""
-        self = super().__new__(cls, f"{start}:{stop}")
-        self.values = values
-        return self
-
-    @classmethod
-    def from_start_istop(cls, start, istop, values):
-        """Return Region from (start, istop) integers and the sequence."""
-        self = super().__new__(cls, f"{start}:{istop + 1}")
-        self.values = values
-        return self
+    def from_attrs(cls, obj, values):
+        """Return Region from object's attributes and the sequence."""
+        return Region(f"{obj.start}:{obj.istop + 1}", values)
 
     def __getattr__(self, name):
         """Get attribute."""
-        if name == "slice":
-            # Convert to python's slice object:
-            return slice(*map(int, self.split(self.sep)))
-        elif name == "tuple":
-            # Tuple of integers (start, stop):
-            return tuple(map(int, self.split(self.sep)))
-        elif name == "start":
+        if name == "start":
             # The start integer position:
-            return self.slice.start
+            return int(self.split(self.sep)[0])
         elif name == "stop":
             # The (exclusive) stop integer position:
-            return self.slice.stop
+            return int(self.split(self.sep)[1])
         elif name == "istop":
-            # The index of the last item:
+            # The inclusive stop (index of the last item):
             return self.stop - 1
-        if name == "max":
+        elif name == "max":
             # Maximum value in the region:
-            return max(self.values[self.slice])
-        if name == "min":
+            return max(self.subarray())
+        elif name == "min":
             # Minimum value in the region:
-            return min(self.values[self.slice])
-        if name == "argmax":
+            return min(self.subarray())
+        elif name == "argmax":
             # Index of (the first) maximum value in the region:
-            return self.values.index(self.max, *self.tuple)
-        if name == "argmin":
+            return self.values.index(self.max, self.start, self.stop)
+        elif name == "argmin":
             # Index of (the first) minimum value in the region:
-            return self.values.index(self.min, *self.tuple)
-        if name == "size":
+            return self.values.index(self.min, self.start, self.stop)
+        elif name == "size":
             # Distance between maximum and minimum value:
             return self.max - self.min
         else:
@@ -124,8 +143,6 @@ class Region(str):
     def __dir__(self):
         """Return list of attribute/method names."""
         return [
-            "slice",
-            "tuple",
             "start",
             "stop",
             "istop",
@@ -141,6 +158,7 @@ class Region(str):
             "is_valley",
             "is_local_maximum",
             "is_local_minimum",
+            "subarray",
         ]
 
     def __repr__(self) -> str:
@@ -157,7 +175,7 @@ class Region(str):
 
     def __iter__(self):
         """Yield indices in the region."""
-        yield from range(*self.tuple)
+        yield from range(self.start, self.stop)
 
     def __le__(self, other) -> bool:
         """Return True if set(self) <= set(other)."""
@@ -209,25 +227,72 @@ class Region(str):
         """Return True if region is a local minimum."""
         return self.size == 0 and self.is_valley()
 
+    def subarray(self, array=None):
+        """Return region of (other) array as a new sequence."""
+        if array is None:
+            array = self.values
+        return array[slice(self.start, self.stop)]
+
 
 class Scope(Region):
     """String representing a peak region or valley region."""
 
+    def __new__(cls, slicestr, argext, argcut, values):
+        """Create region and add argext, argcut attributes."""
+        self = super().__new__(cls, slicestr, values)
+        self.argext = argext
+        self.argcut = argcut
+        return self
+
+    @classmethod
+    def from_attrs(cls, obj, values):
+        """Return Scope from object's attributes and the sequence."""
+        return Scope(f"{obj.start}:{obj.istop + 1}", obj.argext, obj.argcut, values)
+
+    def __getattr__(self, name):
+        """Get attribute."""
+        if name == "extremum":
+            # Return max for peak or min for valley:
+            return self.values[self.argext]
+        elif name == "cutoff":
+            # Return min for peak or max for valley:
+            return self.values[self.argcut]
+        elif name == "max":
+            # Maximum value in the region:
+            return max(self.cutoff, self.extremum)
+        elif name == "min":
+            # Minimum value in the region:
+            return min(self.cutoff, self.extremum)
+        elif name == "argmax":
+            # Index of (the first) maximum value in the region:
+            return self.argcut if self.cutoff > self.extremum else self.argext
+        elif name == "argmin":
+            # Index of (the first) minimum value in the region:
+            return self.argcut if self.cutoff < self.extremum else self.argext
+        elif name == "pose":
+            # Return Pose:
+            return Pose(
+                self.start,
+                self.istop,
+                self.argext,
+                self.argcut,
+                self.extremum,
+                self.cutoff,
+            )
+        else:
+            # Attribute of Region:
+            return super().__getattr__(name)
+
     def __dir__(self):
         """Return list of attribute/method names."""
         return super().__dir__() + [
-            "boundary_value",
+            "argext",
+            "argcut",
+            "extremum",
+            "cutoff",
+            "pose",
         ]
 
     def __repr__(self) -> str:
         """Return string that can reconstruct the object."""
-        return f'Scope("{self}", _)'
-
-    def boundary_value(self):
-        """Return peak's min or valley's max or None."""
-        if self.is_peak():
-            return self.min
-        elif self.is_valley():
-            return self.max
-        else:
-            return None
+        return f'Scope("{self}", {self.argext}, {self.argcut}, _)'

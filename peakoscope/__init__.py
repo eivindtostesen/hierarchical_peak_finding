@@ -4,7 +4,7 @@
 # Peakoscope is licensed under GPLv3.
 """Peakoscope package.
 
-Peakoscope is a python package for hierarchical analysis of peak and valley regions.
+Peakoscope is a python package for hierarchical analysis of peak and valley regions in numeric data.
 
 Usage examples:
 ---------------
@@ -23,7 +23,7 @@ Compute the tree of nested peak regions in a data set:
 From the tree, select default peak regions and print their subarrays of data:
 
 >>> for peak in tree(data).size_filter():
-...    print(data[peak.slice])
+...    print(peak.subarray(data))
 ... 
 [80]
 [70, 70]
@@ -34,7 +34,7 @@ Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under GPL-3.
 """
 
 
-__version__ = "1.0.0.dev4"
+__version__ = "1.0.0.dev5"
 
 
 # Import names:
@@ -52,14 +52,14 @@ def tree(data, *, valleys=False):
     if valleys:
         return Tree.from_valleys(
             map(
-                lambda t: Scope.from_start_istop(*t[0:2], data),
+                lambda t: Scope.from_attrs(Pose(*t), data),
                 find_valleys(data),
             )
         )
     else:
         return Tree.from_peaks(
             map(
-                lambda t: Scope.from_start_istop(*t[0:2], data),
+                lambda t: Scope.from_attrs(Pose(*t), data),
                 find_peaks(data),
             )
         )

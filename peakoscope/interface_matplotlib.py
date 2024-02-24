@@ -2,7 +2,19 @@
 # This file is part of Peakoscope.
 # Copyright (C) 2021-2024  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
-"""Python module for visualizing peaks and valleys in matplotlib.
+"""Python module for visualizing peaks and valleys.
+
+Matplotlib is used in the object-oriented way to plot peaks and valleys.
+
+For each peak or valley, the functions add_L_arrow, add_bounding_box,
+add_crown and add_bar can be called to add elements to an existing plot.
+
+For a Tree of peaks or valleys, the class TreeMatPlotLib adds the methods
+arrows, bounding_boxes, crowns and pyramids for plotting nodes in the Tree.
+
+TreeMatPlotLib stores dicts containing x,y coordinates, with either default
+or customized values, as an intermediary in the data flow from a Tree
+to matplotlib, which provides more adaptability.
 
 """
 
@@ -106,7 +118,7 @@ class TreeMatPlotLib(ChainedAttributes):
         xy={},
         xinterval={},
         yinterval={},
-        boundary_value=None,
+        cutoff={},
         slice_of_x={},
         slice_of_y={},
     ):
@@ -122,7 +134,7 @@ class TreeMatPlotLib(ChainedAttributes):
         self.xy = xy
         self.xinterval = xinterval
         self.yinterval = yinterval
-        self.boundary_value = boundary_value
+        self.cutoff = cutoff
         self.slice_of_x = slice_of_x
         self.slice_of_y = slice_of_y
         self.level = dict(self.rootself.levels())
@@ -134,15 +146,15 @@ class TreeMatPlotLib(ChainedAttributes):
         if not ylim:
             self.ylim = (self.rootself.root().min, self.rootself.root().max)
         if not xy:
-            self.xy = {n: (self.X[n.argmax], n.min) for n in self.rootself}
+            self.xy = {n: (self.X[n.argext], n.cutoff) for n in self.rootself}
         if not xinterval:
             self.xinterval = {
                 n: (self.X[n.start], self.X[n.istop]) for n in self.rootself
             }
         if not yinterval:
             self.yinterval = {n: (n.min, n.max) for n in self.rootself}
-        if not boundary_value:
-            self.boundary_value = {n: n.boundary_value() for n in self.rootself}
+        if not cutoff:
+            self.cutoff = {n: n.cutoff for n in self.rootself}
         plt.style.use("fast")
 
     def new(self, *, figsize=(10.0, 4.0)):
@@ -197,7 +209,7 @@ class TreeMatPlotLib(ChainedAttributes):
                 self.ax,
                 self.slice_of_x[n],
                 self.slice_of_y[n],
-                self.boundary_value[n],
+                self.cutoff[n],
                 **kwargs,
             )
         return self
