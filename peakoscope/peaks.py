@@ -2,7 +2,7 @@
 # This file is part of Peakoscope.
 # Copyright (C) 2021-2024  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
-"""Python module for peak/valley and other regions in a numeric sequence.
+"""Python module for regions in a numeric sequence.
 
 The function find_peaks goes through an iterable of numbers
 in one pass yielding all peak regions as they are found.
@@ -12,7 +12,7 @@ A Region object represents any region in a sequence of numbers.
 It is stored as start:stop positions and the sequence reference.
 
 A Scope object represents a peak or valley region in a numeric sequence.
-It is derived from the Region class, but in addition to start and stop,
+It is derived from the Region class, but in addition to start:stop,
 it stores the positions argext and argcut.
 
 'argext' is the (first) position of the 'extremum', defined as the
@@ -71,12 +71,12 @@ def find_peaks(values, reverse=False):
             while regions and lessthan(y2, regions[-1][5]):
                 popped = regions.pop()
                 popped[1] = i  # update istop value
-                yield popped
+                yield tuple(popped)
             if not (regions and y2 == regions[-1][5]):
                 regions.append([popped[0], None, popped[2], i + 1, popped[4], y2])
     for r in reversed(regions):
         r[1] = i + 1  # use last i value
-        yield r
+        yield tuple(r)
 
 
 def find_valleys(values):
@@ -252,10 +252,10 @@ class Scope(Region):
     def __getattr__(self, name):
         """Get attribute."""
         if name == "extremum":
-            # Return max for peak or min for valley:
+            # Return max of peak or min of valley:
             return self.values[self.argext]
         elif name == "cutoff":
-            # Return min for peak or max for valley:
+            # Return min of peak or max of valley:
             return self.values[self.argcut]
         elif name == "max":
             # Maximum value in the region:
@@ -270,7 +270,7 @@ class Scope(Region):
             # Index of (the first) minimum value in the region:
             return self.argcut if self.cutoff < self.extremum else self.argext
         elif name == "pose":
-            # Return Pose:
+            # Return as Pose:
             return Pose(
                 self.start,
                 self.istop,

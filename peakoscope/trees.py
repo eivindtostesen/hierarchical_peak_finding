@@ -4,11 +4,13 @@
 # Peakoscope is licensed under GPLv3.
 """Python module for trees of peak regions or valley regions.
 
-This module contains algorithms for building trees that
-represent the hierarchical nesting of regions and subregions
-containing peaks or valleys in numeric
-one-dimensional or higher-dimensional data.
-The tree classes provide methods for searching and selecting regions.
+This module contains algorithms and classes
+for building trees that represent the hierarchical nesting
+of regions and subregions containing peaks or valleys
+in numeric one-dimensional or higher-dimensional data.
+
+The tree classes provide methods for
+searching, sorting and selecting regions.
 
 """
 
@@ -24,12 +26,13 @@ def tree_from_peaks(
     peaks,
     *,
     presorted=True,
+    reverse=False,
     getstart=attrgetter("start"),
     getistop=attrgetter("istop"),
-    getmin=attrgetter("min"),
-    getmax=attrgetter("max"),
+    getcutoff=attrgetter("cutoff"),
+    getextremum=attrgetter("extremum"),
 ):
-    """Return (parent, root, children, tip) from peak regions having start, istop, min, max."""
+    """Return (parent, root, children, tip) from peak regions having start, istop, cutoff, extremum."""
     parent = {}
     children = {}
     tip = {}
@@ -37,7 +40,7 @@ def tree_from_peaks(
     if not presorted:
         peaks = list(peaks)
         # Order same as given by 'find_peaks' function:
-        peaks.sort(key=getmin, reverse=True)
+        peaks.sort(key=getcutoff, reverse=not reverse)
         peaks.sort(key=getistop)
     for p in peaks:
         children[p] = []
@@ -46,7 +49,7 @@ def tree_from_peaks(
             children[p].append(c)
             parent[c] = p
         children[p].sort(key=getstart)
-        children[p].sort(key=getmax, reverse=True)
+        children[p].sort(key=getextremum, reverse=not reverse)
         children[p] = tuple(children[p])
         tip[p] = tip[children[p][0]] if children[p] else p
         in_spe.append(p)
@@ -66,7 +69,7 @@ class Tree:
     a time series, a function y(x) or other univariate data.
 
     A Tree is initialized with an iterable of regions
-    that have start, istop, min, max. The regions
+    that have start, istop, cutoff, extremum. The regions
     must be unique hashable objects to be used as dictionary keys.
 
     Notes
@@ -93,25 +96,11 @@ class Tree:
         return obj
 
     @classmethod
-    def from_valleys(
-        cls,
-        valleys,
-        *,
-        presorted=True,
-        getstart=attrgetter("start"),
-        getistop=attrgetter("istop"),
-        getmin=lambda p: -p.max,
-        getmax=lambda p: -p.min,
-    ):
+    def from_valleys(cls, valleys, **kwargs):
         """Return new Tree from iterable of valley regions."""
         obj = cls.__new__(cls)
         obj._parent, obj._root, obj._children, obj._tip = tree_from_peaks(
-            valleys,
-            presorted=presorted,
-            getstart=getstart,
-            getistop=getistop,
-            getmin=getmin,
-            getmax=getmax,
+            valleys, reverse=True, **kwargs
         )
         obj._find_full()
         return obj
