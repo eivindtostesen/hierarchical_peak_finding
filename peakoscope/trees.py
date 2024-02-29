@@ -232,17 +232,9 @@ class Tree:
         """Return True if the given node has sub regions."""
         return node != self._tip[node]
 
-    def max(self, node):
-        """Return the max value in the given region."""
-        return node.max
-
-    def min(self, node):
-        """Return the min value in the given region."""
-        return node.min
-
     def size(self, node):
         """Return vertical size of given node (max minus min)."""
-        return node.size
+        return abs(node.extremum - node.cutoff)
 
     def parent(self, node):
         """Return the parent (containing region) or None."""
@@ -284,7 +276,7 @@ class Tree:
         yield from self.path(node, self.root(), self.parent)
 
     def main_path(self, node):
-        """Yield nodes on the main child path from given node to its tip."""
+        """Yield nodes on the main_child path from given node to its tip."""
         yield from self.path(node, self.tip(node), self.main_child)
 
     def subtree(self, localroot=None):
@@ -352,7 +344,7 @@ class Tree:
             node for node in self.subtree(localroot) if len(self.children(node)) == 1
         )
 
-    def size_filter(self, *, maxsize=None, localroot=None):
+    def size_filter(self, localroot=None, *, maxsize=None):
         """Yield subtree nodes filtered by size."""
         # defaults:
         if localroot is None:
@@ -563,7 +555,7 @@ class HyperTree(Tree):
             for b in self.R.leaf_nodes():
                 yield a, b
 
-    def size_filter(self, *, maxsize=None, localroot=None):
+    def size_filter(self, localroot=None, *, maxsize=None):
         """Yield grid nodes in given subtree."""
         # defaults:
         if localroot is None:
@@ -593,14 +585,6 @@ class HyperTree(Tree):
 
     def set_nodes(self):
         """Return that it is NotImplemented."""
-        return NotImplemented
-
-    def max(self, frame):
-        """Return that max is NotImplemented."""
-        return NotImplemented
-
-    def min(self, node):
-        """Return that min is NotImplemented."""
         return NotImplemented
 
     def _find_full(self):

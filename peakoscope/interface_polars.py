@@ -4,10 +4,15 @@
 # Peakoscope is licensed under GPLv3.
 """Python module for using polars in peak/valley analysis.
 
+Class TreePolars provides methods called dataframe, tree_structure,
+numeric_properties, location_properties and node_properties
+that return polars dataframes with one row per Tree node.
+
 """
 
 
 from itertools import chain
+from operator import attrgetter, methodcaller
 import polars as pl
 from peakoscope.utilities import ChainedAttributes
 
@@ -25,39 +30,49 @@ class TreePolars(ChainedAttributes):
     def __init__(
         self,
         tree,
-        attrname="polars",
+        attrname="df",
         X=None,
-        objecttype=(
-            "node root parent full tip children main_child lateral"
-            "root_path main_path subtree main_descendants "
-            "lateral_descendants full_nodes leaf_nodes "
-            "branch_nodes linear_nodes"
+        node_attributes=(
+            "start stop istop "
+            "max min argmax argmin size "
+            "argext argcut extremum cutoff "
         ).split(),
+        node_methods=(
+            "pre post "
+            "is_peak is_valley is_local_maximum is_local_minimum "
+            "__len__ __repr__ __str__ "
+        ).split(),
+        node_methods_to_lists=("__iter__ subarray ").split(),
+        tree_methods=("parent full tip is_nonroot has_children _index").split(),
+        tree_methods_to_lists=(
+            "children lateral "
+            "root_path main_path size_filter "
+            "subtree main_descendants lateral_descendants full_nodes "
+            "leaf_nodes branch_nodes linear_nodes"
+        ).split(),
+        objecttype=("node root parent full tip main_child").split(),
         **kwargs,
     ):
-        """Attach this polars-aware object to a Tree."""
+        """Attach this pandas-aware object to a Tree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
-        if X is None:
-            self.x_start = lambda n: n.start
-            self.x_end = lambda n: n.istop
-        else:
+        if X:
             self.x_start = lambda n: X[n.start]
             self.x_end = lambda n: X[n.istop]
         self.node = lambda n: n
-        self.root = lambda n: self.rootself.root()
+        self.root = lambda _: self.rootself.root()
         self.main_child = lambda n: (
             self.rootself.main_child(n) if self.rootself.has_children(n) else None
         )
-        for name in (
-            "parent full tip is_nonroot has_children size max min _index"
-        ).split():
+        for name in node_attributes:
+            setattr(self, name, attrgetter(name))
+        for name in node_methods:
+            setattr(self, name, methodcaller(name))
+        for name in node_methods_to_lists:
+            setattr(self, name, lambda node, met=name: list(methodcaller(met)(node)))
+        for name in tree_methods:
             setattr(self, name, getattr(self.rootself, name))
-        for name in (
-            "children lateral root_path main_path subtree main_descendants "
-            "lateral_descendants full_nodes leaf_nodes "
-            "branch_nodes linear_nodes"
-        ).split():
+        for name in tree_methods_to_lists:
             setattr(
                 self,
                 name,
@@ -175,4 +190,16 @@ class TreePolars(ChainedAttributes):
             definitions=dict(
                 location=lambda n: f"{self.x_start(n)}..{self.x_end(n)}",
             ),
+        )
+
+    def node_properties(self):
+        """Return dataframe with node attributes and methods."""
+        return self.dataframe(
+            (
+                "__str__ __repr__ __len__ "
+                "start stop istop pre post "
+                "argmax argmin max min size "
+                "argext argcut extremum cutoff "
+                "is_peak is_valley is_local_maximum is_local_minimum "
+            )
         )

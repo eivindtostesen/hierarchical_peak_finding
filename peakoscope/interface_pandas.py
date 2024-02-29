@@ -4,10 +4,15 @@
 # Peakoscope is licensed under GPLv3.
 """Python module for using pandas in peak/valley analysis.
 
+Class TreePandas provides methods called dataframe, tree_structure,
+numeric_properties, location_properties and node_properties
+that return pandas dataframes with one row per Tree node.
+
 """
 
 
 from itertools import chain
+from operator import attrgetter, methodcaller
 import pandas as pd
 from peakoscope.utilities import ChainedAttributes
 
@@ -25,40 +30,49 @@ class TreePandas(ChainedAttributes):
     def __init__(
         self,
         tree,
-        attrname="pandas",
+        attrname="df",
         X=None,
-        objecttype=(
-            "node root parent full tip children main_child lateral"
-            "root_path main_path subtree main_descendants "
-            "lateral_descendants full_nodes leaf_nodes "
-            "branch_nodes linear_nodes"
+        node_attributes=(
+            "start stop istop "
+            "max min argmax argmin size "
+            "argext argcut extremum cutoff "
         ).split(),
+        node_methods=(
+            "pre post "
+            "is_peak is_valley is_local_maximum is_local_minimum "
+            "__len__ __repr__ __str__ "
+        ).split(),
+        node_methods_to_lists=("__iter__ subarray ").split(),
+        tree_methods=("parent full tip is_nonroot has_children _index").split(),
+        tree_methods_to_lists=(
+            "children lateral "
+            "root_path main_path size_filter "
+            "subtree main_descendants lateral_descendants full_nodes "
+            "leaf_nodes branch_nodes linear_nodes"
+        ).split(),
+        objecttype=("node root parent full tip main_child").split(),
         **kwargs,
     ):
         """Attach this pandas-aware object to a Tree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
-        if X is None:
-            self.x_start = lambda n: n.start
-            self.x_end = lambda n: n.istop
-        else:
+        if X:
             self.x_start = lambda n: X[n.start]
             self.x_end = lambda n: X[n.istop]
         self.node = lambda n: n
-        self.root = lambda n: self.rootself.root()
+        self.root = lambda _: self.rootself.root()
         self.main_child = lambda n: (
             self.rootself.main_child(n) if self.rootself.has_children(n) else None
         )
-        for name in (
-            "parent children lateral full tip is_nonroot "
-            "has_children size max min _index"
-        ).split():
+        for name in node_attributes:
+            setattr(self, name, attrgetter(name))
+        for name in node_methods:
+            setattr(self, name, methodcaller(name))
+        for name in node_methods_to_lists:
+            setattr(self, name, lambda node, met=name: list(methodcaller(met)(node)))
+        for name in tree_methods:
             setattr(self, name, getattr(self.rootself, name))
-        for name in (
-            "root_path main_path subtree main_descendants "
-            "lateral_descendants full_nodes leaf_nodes "
-            "branch_nodes linear_nodes"
-        ).split():
+        for name in tree_methods_to_lists:
             setattr(
                 self,
                 name,
@@ -115,7 +129,7 @@ class TreePandas(ChainedAttributes):
         """Return sorted dataframe."""
         return dataframe.sort_values(
             by="node",
-            key=lambda col: col.map(getattr(self.rootself, by)),
+            key=lambda col: col.map(getattr(self, by)),
             ignore_index=True,
             **kwargs,
         )
@@ -135,7 +149,7 @@ class TreePandas(ChainedAttributes):
         return df.reset_index().convert_dtypes().pipe(self.sort)
 
     def tree_structure(self):
-        """Return dataframe with topological attributes."""
+        """Return dataframe with tree relationships."""
         return self.dataframe(
             "tip children node parent full root",
             filter=chain.from_iterable(
@@ -155,4 +169,16 @@ class TreePandas(ChainedAttributes):
             definitions=dict(
                 location=lambda n: f"{self.x_start(n)}..{self.x_end(n)}",
             ),
+        )
+
+    def node_properties(self):
+        """Return dataframe with node attributes and methods."""
+        return self.dataframe(
+            (
+                "__str__ __repr__ __len__ "
+                "start stop istop pre post "
+                "argmax argmin max min size "
+                "argext argcut extremum cutoff "
+                "is_peak is_valley is_local_maximum is_local_minimum "
+            )
         )
