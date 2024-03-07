@@ -43,7 +43,9 @@ class TreePolars(ChainedAttributes):
             "__len__ __repr__ __str__ "
         ).split(),
         node_methods_to_lists=("__iter__ subarray ").split(),
-        tree_methods=("parent full tip is_nonroot has_children _index").split(),
+        tree_methods=(
+            "main_child parent full tip is_nonroot has_children _index"
+        ).split(),
         tree_methods_to_lists=(
             "children lateral "
             "root_path main_path size_filter "
@@ -61,9 +63,6 @@ class TreePolars(ChainedAttributes):
             self.x_end = lambda n: X[n.istop]
         self.node = lambda n: n
         self.root = lambda _: self.rootself.root()
-        self.main_child = lambda n: (
-            self.rootself.main_child(n) if self.rootself.has_children(n) else None
-        )
         for name in node_attributes:
             setattr(self, name, attrgetter(name))
         for name in node_methods:

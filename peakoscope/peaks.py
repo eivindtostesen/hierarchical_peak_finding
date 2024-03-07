@@ -28,14 +28,14 @@ Find all peak regions in a data set:
 
 >>> data = [10, 30, 40, 30, 10, 50, 70, 70, 50, 80]
 >>> for p in find_peaks(data):
-...     print(Pose(*p))
+...     print(Scope6(*p))
 ... 
-Pose(start=2, istop=2, argext=2, argcut=2, extremum=40, cutoff=40)
-Pose(start=1, istop=3, argext=2, argcut=1, extremum=40, cutoff=30)
-Pose(start=6, istop=7, argext=6, argcut=6, extremum=70, cutoff=70)
-Pose(start=9, istop=9, argext=9, argcut=9, extremum=80, cutoff=80)
-Pose(start=5, istop=9, argext=9, argcut=5, extremum=80, cutoff=50)
-Pose(start=0, istop=9, argext=9, argcut=0, extremum=80, cutoff=10)
+Scope6(start=2, istop=2, argext=2, argcut=2, extremum=40, cutoff=40)
+Scope6(start=1, istop=3, argext=2, argcut=1, extremum=40, cutoff=30)
+Scope6(start=6, istop=7, argext=6, argcut=6, extremum=70, cutoff=70)
+Scope6(start=9, istop=9, argext=9, argcut=9, extremum=80, cutoff=80)
+Scope6(start=5, istop=9, argext=9, argcut=5, extremum=80, cutoff=50)
+Scope6(start=0, istop=9, argext=9, argcut=0, extremum=80, cutoff=10)
 
 
 """
@@ -87,9 +87,9 @@ def find_valleys(values):
 # Classes:
 
 
-Pose = namedtuple(
-    "Pose",
-    # A pose encodes the position and orientation of a peak or valley region:
+Scope6 = namedtuple(
+    "Scope6",
+    # A Scope6 encodes the position and orientation of a peak or valley region:
     "start, istop, argext, argcut, extremum, cutoff",
     defaults=(None, None, None, None),
 )
@@ -269,16 +269,6 @@ class Scope(Region):
         elif name == "argmin":
             # Index of (the first) minimum value in the region:
             return self.argcut if self.cutoff < self.extremum else self.argext
-        elif name == "pose":
-            # Return as Pose:
-            return Pose(
-                self.start,
-                self.istop,
-                self.argext,
-                self.argcut,
-                self.extremum,
-                self.cutoff,
-            )
         else:
             # Attribute of Region:
             return super().__getattr__(name)

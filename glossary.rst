@@ -123,11 +123,6 @@ peak
   Implemented in the function ``find_peaks()`` and the method ``Region.is_peak()``.
   See also local maximum.
 
-pose
-  Six values specifying the position and orientation of a peak or valley:
-  ``(start, istop, argext, argcut, extremum, cutoff)``.
-  Implemented as namedtuple ``Pose``.
-
 post
   Position(s) coming after/to the right of/succeeding a region.
   Implemented in method ``Region.post()``.
@@ -146,7 +141,8 @@ root node
 
 scope
   A region containing a peak or a valley.
-  Implemented in the ``Scope`` class.
+  Implemented in the ``Scope`` class and as the namedtuple ``Scope6``
+  (with six attributes ``start, istop, argext, argcut, extremum, cutoff``).
   See also peak and valley.
 
 size

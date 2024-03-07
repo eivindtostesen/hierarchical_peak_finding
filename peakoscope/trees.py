@@ -225,7 +225,7 @@ class Tree:
         return node != self._root
 
     def tip(self, node):
-        """Return the smallest region with same extremum as the given node."""
+        """Return the smallest region with same argext as the given node."""
         return self._tip[node]
 
     def has_children(self, node):
@@ -241,19 +241,22 @@ class Tree:
         return self._parent[node]
 
     def children(self, node):
-        """Return ordered tuple of children."""
+        """Return ordered tuple of children of given node."""
         return self._children[node]
 
     def main_child(self, node):
-        """Return child node with same extremum as the given node."""
-        return self.children(node)[0]
+        """Return child of given node with same argext, or None."""
+        if self.has_children(node):
+            return self.children(node)[0]
+        else:
+            return None
 
     def lateral(self, node):
-        """Return the given node's lateral children (tuple except first)."""
+        """Return ordered tuple of the given node's lateral children."""
         return self.children(node)[1:]
 
     def full(self, node):
-        """Return the largest region with same extremum as the given node."""
+        """Return the largest region with same argext as the given node."""
         return self._full[node]
 
     def _index(self, node):

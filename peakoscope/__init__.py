@@ -34,14 +34,14 @@ Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under GPL-3.
 """
 
 
-__version__ = "1.0.0.dev7"
+__version__ = "1.0.0.dev8"
 
 
 # Import names:
 from peakoscope.errors import PeakyBlunder
 from peakoscope.utilities import ChainedAttributes
 from peakoscope.trees import tree_from_peaks, Tree, HyperTree
-from peakoscope.peaks import find_peaks, find_valleys, Pose, Region, Scope
+from peakoscope.peaks import find_peaks, find_valleys, Scope6, Region, Scope
 from peakoscope.formats import TreeStrings
 from peakoscope.data import example_1, example_2
 
@@ -52,14 +52,14 @@ def tree(data, *, valleys=False):
     if valleys:
         return Tree.from_valleys(
             map(
-                lambda t: Scope.from_attrs(Pose(*t), data),
+                lambda t: Scope.from_attrs(Scope6(*t), data),
                 find_valleys(data),
             )
         )
     else:
         return Tree.from_peaks(
             map(
-                lambda t: Scope.from_attrs(Pose(*t), data),
+                lambda t: Scope.from_attrs(Scope6(*t), data),
                 find_peaks(data),
             )
         )
