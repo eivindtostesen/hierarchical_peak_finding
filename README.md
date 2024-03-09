@@ -4,7 +4,7 @@
 
 Peakoscope is a python package for hierarchical analysis of peak and valley regions in numeric data.
 
-![peak plot](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v0.9.0/output.png?raw=true "fig, (peaks.plot.ax, valleys.plot.ax) = plt.subplots(2, 1, sharex=True, figsize=(4, 4));
+![peak plot](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/output.png?raw=true "fig, (peaks.plot.ax, valleys.plot.ax) = plt.subplots(2, 1, sharex=True, figsize=(4, 4));
 peaks.plot.crowns(peaks.size_filter(maxsize=7))
 peaks.plot.bounding_boxes(peaks.size_filter(maxsize=7))
 valleys.plot.crowns(valleys.size_filter(maxsize=7), facecolor='C9')
@@ -43,15 +43,16 @@ From the tree, select default peak regions and print their subarrays of data:
 ```
 
 ## Howto files
-The github repo contains tutorials written as jupyter notebooks:
-* [plotting_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v0.9.0/plotting_tutorial.ipynb)
-* [dataframes_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v0.9.0/dataframes_tutorial.ipynb)
+The github repo contains tutorials and a glossary:
+* [plotting_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/plotting_tutorial.ipynb)
+* [dataframes_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/dataframes_tutorial.ipynb)
+* [glossary.rst](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/glossary.rst)
 
 ## Authors
 * Eivind Tøstesen, <contact@tostesen.no>
 
 ## License
-Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under [GPLv3](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v0.9.0/LICENSE?raw=true "included LICENSE file")
+Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under [GPLv3](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/LICENSE?raw=true "included LICENSE file")
 
 ## Citation
 Citation can include one or more of:

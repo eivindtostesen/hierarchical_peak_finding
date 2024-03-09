@@ -4,6 +4,38 @@
 # Peakoscope is licensed under GPLv3.
 """Python module for generating data sets.
 
+Synthetic data sets based on random walks:
+
+The function randomwalk() takes as argument
+a list of numeric steps and accumulates them
+into a walk. Random steps are returned by the
+functions discrete_steps() and continuous_steps().
+
+The function alternating_steps() zips together
+two lists of steps. Can be used to generate
+zig-zagging random walks.
+
+Functions example_1() and example_2() return data sets
+intended as mini examples for peakoscope analysis.
+
+Usage examples:
+---------------
+
+Generate a random walk with equally probable up and down steps:
+
+>>> randomwalk(start=5, steps=discrete_steps(length=20, moves=[1, -1]))
+[5, 4, 5, 4, 5, 4, 3, 2, 3, 4, 3, 4, 3, 2, 1, 2, 1, 2, 1, 0, 1]
+
+A sequence with probabilities 0.85 and 0.15 of adding 1 and 10, respectively:
+
+>>> randomwalk(steps=discrete_steps(length=20, moves=[1, 10], weights=[85, 15]))
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 19, 20, 30, 31, 32, 33, 43, 44, 45, 55, 56]
+
+A continuous random walk using the default parameter settings:
+
+>>> randomwalk(steps=continuous_steps())
+[0, -0.6659222888958249, 0.2856116398771149, -0.141155356156913, 0.17382464266411013]
+
 """
 
 import random
@@ -29,7 +61,7 @@ def discrete_steps(
 
 def continuous_steps(
     *,
-    length=10,
+    length=4,
     moves=[1, -1],
     weights=None,
     randomseed="It's...",

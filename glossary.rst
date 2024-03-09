@@ -2,19 +2,23 @@ Glossary
 --------
 
 argcut
-  The argcut of a peak (valley) region is its argmin (argmax).
+  Argument of cutoff:
+  Argmin of a peak region. Argmax of a valley region.
   See also cutoff.
 
 argext
-  The argext of a peak (valley) region is its argmax (argmin).
+  Argument of extremum:
+  Argmax of a peak region. Argmin of a valley region.
   See also extremum.
 
 argmax
-  The argmax of a region ``i:j`` is the index of the first occurrence of the region's maximum
+  Argument of maximum: The argmax of a region ``i:j``
+  is the index of the first occurrence of the region's maximum
   (at or after index ``i`` and before index ``j``).
 
 argmin
-  The argmin of a region ``i:j`` is the index of the first occurrence of the region's minimum
+  Argument of minimum: The argmin of a region ``i:j``
+  is the index of the first occurrence of the region's minimum
   (at or after index ``i`` and before index ``j``).
 
 branching node
@@ -23,7 +27,7 @@ branching node
   See also leaf node and linear node.
 
 cutoff
-  The cutoff of a peak (valley) region is its minimum (maximum).
+  Minimum of a peak region. Maximum of a valley region.
   See also argcut.
 
 descendant node
@@ -31,11 +35,12 @@ descendant node
   of node ``y`` if there is a path of parents from ``x`` to ``y``.
 
 extremum
-  The extremum of a peak (valley) region is its maximum (minimum).
+  Maximum of a peak region. Minimum of a valley region.
   See also argext.
 
 full node
   The outermost of all nodes having the same argext.
+  "Full" as in "full lake".
   A node is full if and only if it is not a main child.
   Implemented in the methods ``Tree.full()`` and ``Tree.full_nodes()``.
   See also tip node.
@@ -45,8 +50,9 @@ full node
   See also region.
 
 innermost node
-  An innermost node of a set of nodes is a
-  node in the set that has no descendants in the set.
+  An innermost node of a subset of nodes is a
+  node in the subset that has no descendants in the subset.
+  Other nodes in the subset are not nested inside an innermost node.
   Implemented in method ``Tree.innermost()``.
   See also outermost node.
 
@@ -57,6 +63,7 @@ innermost node
 
 lateral child
   A child node that has a different argext than its parent.
+  "Lateral" as in "lateral branch".
   Implemented in methods ``Tree.lateral()`` and ``Tree.lateral_descendants()``.
   See also main child.
 
@@ -93,10 +100,10 @@ main child
   See also lateral child.
 
 ``max``
-  Largest value in a region or numeric sequence.
+  Maximum. Largest value in a region or numeric sequence.
 
 ``min``
-  Smallest value in a region or numeric sequence.
+  Minimum. Smallest value in a region or numeric sequence.
 
 nested region
   ``i:j`` is nested inside ``k:l``, written as ``i:j <= k:l``,
@@ -109,17 +116,22 @@ node
   A ``HyperTree`` node is a tuple of nodes.
 
 outermost node
-  An outermost node of a set of nodes is a
-  node in the set that is not descendant of any node in the set.
+  An outermost node of a subset of nodes is a
+  node in the subset that is not descendant of any node in the subset.
+  An outermost node is not nested inside other nodes in the subset.
   Implemented in method ``Tree.outermost()``.
   See also innermost node.
 
 parent node
-  Next node on path to root.
+  The parent of a node is the next node on the path to root.
+
+path
+  Sequence of adjacent nodes in tree.
+  Implemented in methods ``Tree.path()``, ``Tree.root_path()`` and ``Tree.main_path()``. 
 
 peak
   A region where all surrounding (``pre`` and ``post``) values
-  are less than the region's minimum (cutoff) value.
+  are less than the region's minimum (``cutoff``) value.
   Implemented in the function ``find_peaks()`` and the method ``Region.is_peak()``.
   See also local maximum.
 
@@ -137,16 +149,16 @@ region
   See also ``i:j``.
 
 root node
-  A node that has no parent.
+  A node that has no parent node.
 
 scope
   A region containing a peak or a valley.
   Implemented in the ``Scope`` class and as the namedtuple ``Scope6``
-  (with six attributes ``start, istop, argext, argcut, extremum, cutoff``).
+  (with six attributes: ``start, istop, argext, argcut, extremum, cutoff``).
   See also peak and valley.
 
 size
-  The size of a region ``r`` is the difference between its maximum and minimum
+  The size of region ``r`` is the difference between its maximum and minimum
   or equivalently: ``abs(r.extremum - r.cutoff)``.
 
 ``start``
@@ -159,7 +171,7 @@ size
   See also ``istop``.
 
 subarray
-  A subarray is a new sequence corresponding to a region.
+  A new sequence corresponding to a region.
   Implemented in the method ``Region.subarray()``.
 
 subtree
@@ -168,18 +180,19 @@ subtree
 
 tip node
   The innermost of all nodes having the same argext.
+  "Tip" as in "fingertip" or "tip of the iceberg".
   A node is a tip if and only if it has no main child.
   Implemented in the method ``Tree.tip()``.
   See also full node.
 
 tree
-  A graph of nested peaks or valleys.
+  A graph of nested peak regions or valley regions.
   Implemented in the function ``tree()`` and classes ``Tree`` and ``HyperTree``.
   See also nested region.
 
 valley
   A region where all surrounding (``pre`` and ``post``) values
-  are greater than the region's maximum (cutoff) value.
+  are greater than the region's maximum (``cutoff``) value.
   Implemented in the function ``find_valleys()`` and the method ``Region.is_valley()``.
   See also local minimum.
 

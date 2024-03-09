@@ -4,6 +4,13 @@
 # Peakoscope is licensed under GPLv3.
 """Python module for string/text methods and formats.
 
+The class TreeStrings provides methods that print
+or return string representations of a Tree or HyperTree.
+
+The methods repr() and boxdrawing() are similar to
+the tree's own str and repr. The methods indented_list()
+and riverflow() implement different formats.
+
 """
 
 

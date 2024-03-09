@@ -280,7 +280,6 @@ class Scope(Region):
             "argcut",
             "extremum",
             "cutoff",
-            "pose",
         ]
 
     def __repr__(self) -> str:
