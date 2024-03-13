@@ -4,11 +4,11 @@
 
 Peakoscope is a python package for hierarchical analysis of peak and valley regions in numeric data.
 
-![peak plot](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v0.9.0/output.png?raw=true "fig, (peaks.plot.ax, valleys.plot.ax) = plt.subplots(2, 1, sharex=True, figsize=(4, 4));
-peaks.plot.crowns(peaks.filter(maxsize=7))
-peaks.plot.bounding_boxes(peaks.filter(maxsize=7))
-valleys.plot.crowns(valleys.filter(maxsize=7), facecolor='C9')
-valleys.plot.bounding_boxes(valleys.filter(maxsize=7), edgecolor='C1')
+![peak plot](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/output.png?raw=true "fig, (peaks.plot.ax, valleys.plot.ax) = plt.subplots(2, 1, sharex=True, figsize=(4, 4));
+peaks.plot.crowns(peaks.size_filter(maxsize=7))
+peaks.plot.bounding_boxes(peaks.size_filter(maxsize=7))
+valleys.plot.crowns(valleys.size_filter(maxsize=7), facecolor='C9')
+valleys.plot.bounding_boxes(valleys.size_filter(maxsize=7), edgecolor='C1')
 peaks.plot.ax.set_title('Peak regions')
 valleys.plot.ax.set_title('Valley regions')
 peaks.plot.ax.plot(X, Y, linewidth=2, color='black')
@@ -32,10 +32,10 @@ Compute the tree of nested peak regions in a data set:
 └─1:4
   └─2:3
 ```
-From the tree, select "important" peak regions and print their slice of data:
+From the tree, select default peak regions and print their subarrays of data:
 ```python
->>> for peak in peakoscope.tree(data).filter():
-...    print(data[peak.slice])
+>>> for peak in peakoscope.tree(data).size_filter():
+...    print(peak.subarray(data))
 ... 
 [80]
 [70, 70]
@@ -43,15 +43,16 @@ From the tree, select "important" peak regions and print their slice of data:
 ```
 
 ## Howto files
-The github repo contains tutorials written as jupyter notebooks:
-* [plotting_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v0.9.0/plotting_tutorial.ipynb)
-* [dataframes_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v0.9.0/dataframes_tutorial.ipynb)
+The github repo contains tutorials and a glossary:
+* [plotting_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/plotting_tutorial.ipynb)
+* [dataframes_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/dataframes_tutorial.ipynb)
+* [glossary.rst](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/glossary.rst)
 
 ## Authors
 * Eivind Tøstesen, <contact@tostesen.no>
 
 ## License
-Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under [GPLv3](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v0.9.0/LICENSE?raw=true "included LICENSE file")
+Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under [GPLv3](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/LICENSE?raw=true "included LICENSE file")
 
 ## Citation
 Citation can include one or more of:
