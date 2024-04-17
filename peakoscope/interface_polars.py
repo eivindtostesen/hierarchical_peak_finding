@@ -55,7 +55,7 @@ class TreePolars(ChainedAttributes):
         objecttype=("node root parent full tip main_child").split(),
         **kwargs,
     ):
-        """Attach this pandas-aware object to a Tree."""
+        """Attach this polars-aware object to a Tree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
         if X:

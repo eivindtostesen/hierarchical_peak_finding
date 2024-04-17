@@ -42,10 +42,10 @@ From the tree, select default peak regions and print their subarrays of data:
 [30, 40, 30]
 ```
 
-## Howto files
+## Documentation
 The github repo contains tutorials and a glossary:
-* [plotting_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/plotting_tutorial.ipynb)
-* [dataframes_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/dataframes_tutorial.ipynb)
+* [plotting_tutorial.ipynb](https://nbviewer.org/github/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/plotting_tutorial.ipynb)
+* [dataframes_tutorial.ipynb](https://nbviewer.org/github/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/dataframes_tutorial.ipynb)
 * [glossary.rst](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/glossary.rst)
 
 ## Authors
