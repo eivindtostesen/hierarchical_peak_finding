@@ -44,6 +44,7 @@ Scope6(start=0, istop=9, argext=9, argcut=0, extremum=80, cutoff=10)
 from collections import namedtuple
 from operator import lt, gt, le, ge
 from peakoscope.utilities import pairwise
+from peakoscope.errors import PeakyBlunder
 
 
 # Functions:
@@ -179,18 +180,26 @@ class Region(str):
 
     def __le__(self, other) -> bool:
         """Return True if set(self) <= set(other)."""
+        if self.values != other.values:
+            raise PeakyBlunder("Can not compare regions in different sequences.")
         return other.start <= self.start and self.stop <= other.stop
 
     def __ge__(self, other) -> bool:
         """Return True if set(self) >= set(other)."""
+        if self.values != other.values:
+            raise PeakyBlunder("Can not compare regions in different sequences.")
         return other.start >= self.start and self.stop >= other.stop
 
     def __lt__(self, other) -> bool:
         """Return True if set(self) < set(other)."""
+        if self.values != other.values:
+            raise PeakyBlunder("Can not compare regions in different sequences.")
         return self <= other and (other.start != self.start or self.stop != other.stop)
 
     def __gt__(self, other) -> bool:
         """Return True if set(self) > set(other)."""
+        if self.values != other.values:
+            raise PeakyBlunder("Can not compare regions in different sequences.")
         return self >= other and (other.start != self.start or self.stop != other.stop)
 
     def pre(self):

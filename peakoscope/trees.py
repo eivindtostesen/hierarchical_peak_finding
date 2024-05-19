@@ -354,18 +354,14 @@ class Tree:
             localroot = self.root()
         if maxsize is None:
             maxsize = 0.2 * self.size(self.root())
-        # The 'maxdeep' algorithm:
-        if self.size(localroot) < maxsize:
-            yield localroot
-        else:
-            climber = self.tip(localroot)
-            while self.size(self.parent(climber)) < maxsize:
-                climber = self.parent(climber)
-            yield climber
-            while climber != localroot:
-                climber = self.parent(climber)
+        # The 'MAXDEEP algorithm' in reverse:
+        for climber in self.main_path(localroot):
+            if self.size(climber) >= maxsize:
                 for child in self.lateral(climber):
                     yield from self.size_filter(maxsize=maxsize, localroot=child)
+            elif climber == self.root() or self.size(self.parent(climber)) >= maxsize:
+                yield climber
+                break
 
     def innermost(self, nodes, localroot=None):
         """Yield innermost nodes of the given nodes."""
@@ -455,7 +451,7 @@ class HyperTree(Tree):
     def __contains__(self, pair):
         """Return True if the input is a node in the HyperTree."""
         a, b = pair
-        # test if (a, b) is 'sigma-above':
+        # test if (a, b) is 'parent-above':
         return (
             a == self.L.root() or self.L.size(self.L.parent(a)) > self.R.size(b)
         ) and (b == self.R.root() or self.R.size(self.R.parent(b)) > self.L.size(a))
@@ -519,7 +515,9 @@ class HyperTree(Tree):
     def children(self, node):
         """Return the given node's children."""
         a, b = node
-        if self.L.size(a) > self.R.size(b):
+        if not self.has_children(node):
+            return ()
+        elif self.L.size(a) > self.R.size(b):
             return tuple((ca, b) for ca in self.L.children(a))
         elif self.L.size(a) < self.R.size(b):
             return tuple((a, cb) for cb in self.R.children(b))
@@ -531,7 +529,9 @@ class HyperTree(Tree):
     def main_child(self, node):
         """Return the main child (the child that has the same tip)."""
         a, b = node
-        if self.L.size(a) > self.R.size(b):
+        if not self.has_children(node):
+            return None
+        elif self.L.size(a) > self.R.size(b):
             return (self.L.main_child(a), b)
         elif self.L.size(a) < self.R.size(b):
             return (a, self.R.main_child(b))
@@ -552,10 +552,14 @@ class HyperTree(Tree):
         a, b = node
         return self.L._index(a), self.R._index(b)
 
-    def leaf_nodes(self):
+    def leaf_nodes(self, localroot=None):
         """Yield leaf nodes."""
-        for a in self.L.leaf_nodes():
-            for b in self.R.leaf_nodes():
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        ra, rb = localroot
+        for a in self.L.leaf_nodes(localroot=ra):
+            for b in self.R.leaf_nodes(localroot=rb):
                 yield a, b
 
     def size_filter(self, localroot=None, *, maxsize=None):
