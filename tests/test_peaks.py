@@ -24,108 +24,97 @@ def _region(t, values):
 
 
 def _scope_equality(self, other):
-    """For Scopes, the == is not enough, because Scope inherits Region.__eq__."""
+    """For Scopes, the == is not enough, because Scope inherits from str via Region."""
     return self == other and self.argext == other.argext and self.argcut == other.argcut
 
 
-@pytest.fixture(
-    params=[
-        # Discrete random walk data set of length 100:
-        (
-            123,
-            peakoscope.data.discrete_steps(
-                length=99, moves=[3, 1, 0, -1, -3], randomseed=None
-            ),
-        ),
-        # Continuous random walk data set of length 100:
-        (
-            123.0,
-            peakoscope.data.continuous_steps(length=99, moves=[3, -3], randomseed=None),
-        ),
-        # Pathological data sets of lengths 2 and 5:
-        (123, [0]),
-        (123, [1]),
-        (123, [-1]),
-        (123.0, [0.0, 0.0, 0.0, 0.0]),
-    ],
-)
-def data(request):
-    start, steps = request.param
-    return peakoscope.data.randomwalk(start=start, steps=steps)
+def _all_regions(values):
+    """Yield all possible regions."""
+    for start in range(0, len(values)):
+        for istop in range(start, len(values)):
+            yield Region(f"{start}:{istop + 1}", values)
 
 
-def test_version():
-    assert peakoscope.__version__ == "1.1.0.dev2"
+def _peak_regions(values):
+    """Yield all peak regions."""
+    for t in find_peaks(values):
+        yield _region(t, values)
 
 
-def test_mirror_symmetry(data):
+def _valley_regions(values):
+    """Yield all valley regions."""
+    for t in find_valleys(values):
+        yield _region(t, values)
+
+
+def test_mirror_symmetry(data0):
     """Test that negating data swaps peaks and valleys."""
     assert all(
         v == (p[0], p[1], p[2], p[3], -p[4], -p[5])
-        for v, p in zip(find_valleys(data), find_peaks(-y for y in data))
+        for v, p in zip(find_valleys(data0), find_peaks(-y for y in data0))
     )
     assert all(
         v == (p[0], p[1], p[2], p[3], -p[4], -p[5])
-        for p, v in zip(find_peaks(data), find_valleys(-y for y in data))
+        for p, v in zip(find_peaks(data0), find_valleys(-y for y in data0))
     )
 
 
-def test_corner_case(data):
+def test_corner_case(data0):
     """Test that whole sequence is both peak and valley."""
-    whole = Region(f"0:{len(data)}", data)
+    whole = Region(f"0:{len(data0)}", data0)
     assert whole.is_peak() and whole.is_valley()
 
 
-def test_Region(data):
-    """Test methods and attributes of Region objects.
+def test_Region(data0):
+    """Test some methods and attributes of Region objects.
 
     Where: all possible regions
     Objects: Region
-    Attributes: size, argmax, argmin
-    Methods: from_attrs, subarray, is_peak, is_valley
+    Attributes: size, max, min, argmax, argmin
+    Methods: subarray
     Special methods: new, len, iter, contains
     """
-    _peak_regions = {_region(t, data) for t in find_peaks(data)}
-    _valley_regions = {_region(t, data) for t in find_valleys(data)}
-    for start in range(0, len(data)):
-        for istop in range(start, len(data)):
-            region = Region(f"{start}:{istop + 1}", data)
-            assert region.size == 0 if len(region) == 1 else True
-            assert region.argmax in region
-            assert region.argmin in region
-            assert region.subarray() == [data[i] for i in region]
-            assert region.is_peak() == (region in _peak_regions)
-            assert region.is_valley() == (region in _valley_regions)
-            assert all(i in region for i in region)
+    for region in _all_regions(data0):
+        assert region.size == 0 if len(region) == 1 else True
+        assert region.argmax in region
+        assert region.argmin in region
+        assert region.max == region.values[region.argmax]
+        assert region.min == region.values[region.argmin]
+        assert region.subarray() == [data0[i] for i in region]
+        assert all(i in region for i in region)
 
 
-def test_local_extrema(data):
-    """Test local maxima and minima.
+def test_all_peaks_and_valleys_are_found(data0):
+    """Test that find_peaks and find_valleys find everything.
+
+    Where: all possible regions
+    Objects: Region
+    Methods: from_attrs, is_peak, is_valley
+    Special methods: new
+    """
+    assert set(_peak_regions(data0)) == {r for r in _all_regions(data0) if r.is_peak()}
+    assert set(_valley_regions(data0)) == {
+        r for r in _all_regions(data0) if r.is_valley()
+    }
+
+
+def test_all_local_extrema_are_found(data0):
+    """Test that find_peaks and find_valleys include all local extrema.
 
     Where: all possible regions
     Objects: Region
     Methods: from_attrs, is_local_maximum, is_local_minimum
     Special methods: new
     """
-    assert {
-        t[0:2] for t in find_peaks(data) if _region(t, data).is_local_maximum()
-    } == {
-        (start, istop)
-        for start in range(0, len(data))
-        for istop in range(start, len(data))
-        if Region(f"{start}:{istop + 1}", data).is_local_maximum()
+    assert {r for r in _all_regions(data0) if r.is_local_maximum()} == {
+        r for r in _peak_regions(data0) if r.is_local_maximum()
     }
-    assert {
-        t[0:2] for t in find_valleys(data) if _region(t, data).is_local_minimum()
-    } == {
-        (start, istop)
-        for start in range(0, len(data))
-        for istop in range(start, len(data))
-        if Region(f"{start}:{istop + 1}", data).is_local_minimum()
+    assert {r for r in _all_regions(data0) if r.is_local_minimum()} == {
+        r for r in _valley_regions(data0) if r.is_local_minimum()
     }
 
 
-def test_eval_repr(data):
+def test_eval_repr(data0):
     """Test that repr is readable by eval.
 
     Where: peak regions
@@ -133,14 +122,14 @@ def test_eval_repr(data):
     Methods: from_attrs
     Special methods: repr
     """
-    for t in find_peaks(data):
-        _ = data
+    for t in find_peaks(data0):
+        _ = data0
         assert _scope6(t) == eval(repr(_scope6(t))) == t
-        assert _region(t, data) == eval(repr(_region(t, data)))
-        assert _scope_equality(_scope(t, data), eval(repr(_scope(t, data))))
+        assert _region(t, data0) == eval(repr(_region(t, data0)))
+        assert _scope_equality(_scope(t, data0), eval(repr(_scope(t, data0))))
 
 
-def test_horizontally(data):
+def test_horizontal_attributes(data0):
     """Test attributes start, stop, istop.
 
     Where: peak and valley regions
@@ -149,20 +138,20 @@ def test_horizontally(data):
     Methods: from_attrs
     """
     assert all(
-        _scope(t, data).start
-        == _region(t, data).start
+        _scope(t, data0).start
+        == _region(t, data0).start
         == _scope6(t).start
-        <= _scope(t, data).istop
-        == _region(t, data).istop
+        <= _scope(t, data0).istop
+        == _region(t, data0).istop
         == _scope6(t).istop
-        < _scope(t, data).stop
-        == _region(t, data).stop
+        < _scope(t, data0).stop
+        == _region(t, data0).stop
         == _scope6(t).istop + 1
-        for t in chain(find_peaks(data), find_valleys(data))
+        for t in chain(find_peaks(data0), find_valleys(data0))
     )
 
 
-def test_vertically(data):
+def test_vertical_attributes(data0):
     """Test attributes max, min, argmax, argmin, extremum, cutoff, argext, argcut.
 
     Where: peak and valley regions
@@ -171,28 +160,36 @@ def test_vertically(data):
     Methods: from_attrs
     """
     assert all(
-        _scope(t, data).max
-        == _region(t, data).max
-        == _scope(t, data).extremum
+        _scope(t, data0).max
+        == _region(t, data0).max
+        == _scope(t, data0).extremum
         == _scope6(t).extremum
-        and _scope(t, data).min
-        == _region(t, data).min
-        == _scope(t, data).cutoff
+        and _scope(t, data0).min
+        == _region(t, data0).min
+        == _scope(t, data0).cutoff
         == _scope6(t).cutoff
-        and _scope(t, data).argmax == _region(t, data).argmax == _scope(t, data).argext
-        and _scope(t, data).argmin == _region(t, data).argmin == _scope(t, data).argcut
-        for t in find_peaks(data)
+        and _scope(t, data0).argmax
+        == _region(t, data0).argmax
+        == _scope(t, data0).argext
+        and _scope(t, data0).argmin
+        == _region(t, data0).argmin
+        == _scope(t, data0).argcut
+        for t in find_peaks(data0)
     )
     assert all(
-        _scope(t, data).max
-        == _region(t, data).max
-        == _scope(t, data).cutoff
+        _scope(t, data0).max
+        == _region(t, data0).max
+        == _scope(t, data0).cutoff
         == _scope6(t).cutoff
-        and _scope(t, data).min
-        == _region(t, data).min
-        == _scope(t, data).extremum
+        and _scope(t, data0).min
+        == _region(t, data0).min
+        == _scope(t, data0).extremum
         == _scope6(t).extremum
-        and _scope(t, data).argmax == _region(t, data).argmax == _scope(t, data).argcut
-        and _scope(t, data).argmin == _region(t, data).argmin == _scope(t, data).argext
-        for t in find_valleys(data)
+        and _scope(t, data0).argmax
+        == _region(t, data0).argmax
+        == _scope(t, data0).argcut
+        and _scope(t, data0).argmin
+        == _region(t, data0).argmin
+        == _scope(t, data0).argext
+        for t in find_valleys(data0)
     )
