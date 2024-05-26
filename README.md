@@ -37,9 +37,9 @@ From the tree, select default peak regions and print their subarrays of data:
 >>> for peak in peakoscope.tree(data).size_filter():
 ...    print(peak.subarray(data))
 ... 
-[80]
-[70, 70]
 [30, 40, 30]
+[70, 70]
+[80]
 ```
 
 ## Documentation

@@ -25,16 +25,16 @@ From the tree, select default peak regions and print their subarrays of data:
 >>> for peak in tree(data).size_filter():
 ...    print(peak.subarray(data))
 ... 
-[80]
-[70, 70]
 [30, 40, 30]
+[70, 70]
+[80]
 
 Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under GPL-3.
 
 """
 
 
-__version__ = "1.1.0.dev5"
+__version__ = "1.1.0.dev6"
 
 
 # Import names:
