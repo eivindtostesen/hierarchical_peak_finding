@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # This file is part of Peakoscope.
-# Copyright (C) 2021-2024  Eivind Tøstesen
+# Copyright (C) 2021-2025  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
 """Peakoscope package.
 
@@ -34,7 +34,7 @@ Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under GPL-3.
 """
 
 
-__version__ = "1.1.0.dev6"
+__version__ = "1.1.0.dev7"
 
 
 # Import names:
