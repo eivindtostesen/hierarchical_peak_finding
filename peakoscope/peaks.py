@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # This file is part of Peakoscope.
-# Copyright (C) 2021-2024  Eivind Tøstesen
+# Copyright (C) 2021-2025  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
 """Python module for regions in a numeric sequence.
 
@@ -99,16 +99,26 @@ Scope6 = namedtuple(
 class Region(str):
     """String representing a region in a numeric sequence."""
 
-    sep = ":"  # slice notation
+    # slice notation:
+    sep = ":"
+    # class variable for default numerical sequence:
+    default_data = None
 
-    def __new__(cls, slicestr, values):
+    def __new__(cls, slicestr, values=None):
         """Create region with a reference to a numeric sequence."""
+        if values is None:
+            if Region.default_data is None:
+                raise PeakyBlunder(
+                    "Specify argument 'values' or set class variable 'default_data'"
+                )
+            else:
+                values = Region.default_data
         self = super().__new__(cls, slicestr)
         self.values = values
         return self
 
     @classmethod
-    def from_attrs(cls, obj, values):
+    def from_attrs(cls, obj, values=None):
         """Return Region from object's attributes and the sequence."""
         return Region(f"{obj.start}:{obj.istop + 1}", values)
 
@@ -144,6 +154,7 @@ class Region(str):
     def __dir__(self):
         """Return list of attribute/method names."""
         return [
+            "default_data",
             "start",
             "stop",
             "istop",
@@ -164,7 +175,7 @@ class Region(str):
 
     def __repr__(self) -> str:
         """Return string that can reconstruct the object."""
-        return f'Region("{self}", _)'
+        return f'Region("{self}")'
 
     def __contains__(self, index):
         """Return True if index is in the region."""
@@ -246,15 +257,25 @@ class Region(str):
 class Scope(Region):
     """String representing a peak region or valley region."""
 
-    def __new__(cls, slicestr, argext, argcut, values):
+    # class variable for default numerical sequence:
+    default_data = None
+
+    def __new__(cls, slicestr, argext, argcut, values=None):
         """Create region and add argext, argcut attributes."""
+        if values is None:
+            if Scope.default_data is None:
+                raise PeakyBlunder(
+                    "Specify argument 'values' or set class variable 'default_data'"
+                )
+            else:
+                values = Scope.default_data
         self = super().__new__(cls, slicestr, values)
         self.argext = argext
         self.argcut = argcut
         return self
 
     @classmethod
-    def from_attrs(cls, obj, values):
+    def from_attrs(cls, obj, values=None):
         """Return Scope from object's attributes and the sequence."""
         return Scope(f"{obj.start}:{obj.istop + 1}", obj.argext, obj.argcut, values)
 
@@ -293,4 +314,4 @@ class Scope(Region):
 
     def __repr__(self) -> str:
         """Return string that can reconstruct the object."""
-        return f'Scope("{self}", {self.argext}, {self.argcut}, _)'
+        return f'Scope("{self}", {self.argext}, {self.argcut})'

@@ -29,12 +29,12 @@ From the tree, select default peak regions and print their subarrays of data:
 [70, 70]
 [80]
 
-Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under GPL-3.
+Copyright (C) 2021-2025 Eivind Tøstesen. This software is licensed under GPL-3.
 
 """
 
 
-__version__ = "1.1.0.dev7"
+__version__ = "1.1.0.dev8"
 
 
 # Import names:

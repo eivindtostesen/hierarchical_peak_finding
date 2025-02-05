@@ -107,13 +107,14 @@ def test_non_linear_tree(zigzag_data):
 
 def test_eval_repr(data1):
     """Test that repr is readable by eval."""
-    _ = data1
-    tree = peakoscope.tree(_)
+    Scope.default_data = data1
+    tree = peakoscope.tree(data1)
     # Tree:
     assert repr(tree) == repr(eval(repr(tree)))
     # HyperTree:
     assert repr(tree @ tree) == repr(eval(repr(tree @ tree)))
     assert repr(tree @ tree @ tree) == repr(eval(repr(tree @ tree @ tree)))
+    Scope.default_data = None
 
 
 def test_children_are_sorted_by_extremum(data1):

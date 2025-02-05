@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # This file is part of Peakoscope.
-# Copyright (C) 2021-2024  Eivind Tøstesen
+# Copyright (C) 2021-2025  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
 
 
@@ -122,11 +122,14 @@ def test_eval_repr(data0):
     Methods: from_attrs
     Special methods: repr
     """
+    Region.default_data = data0
+    Scope.default_data = data0
     for t in find_peaks(data0):
-        _ = data0
         assert _scope6(t) == eval(repr(_scope6(t))) == t
         assert _region(t, data0) == eval(repr(_region(t, data0)))
         assert _scope_equality(_scope(t, data0), eval(repr(_scope(t, data0))))
+    Region.default_data = None
+    Scope.default_data = None
 
 
 def test_horizontal_attributes(data0):
