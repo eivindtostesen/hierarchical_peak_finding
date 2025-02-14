@@ -8,6 +8,7 @@ import pytest
 from itertools import chain
 import peakoscope
 import peakoscope.data
+import peakoscope.testing as testing
 from peakoscope import find_peaks, find_valleys, Region, Scope, Scope6
 
 
@@ -21,11 +22,6 @@ def _scope(t, values):
 
 def _region(t, values):
     return Region.from_attrs(Scope6(*t), values)
-
-
-def _scope_equality(self, other):
-    """For Scopes, the == is not enough, because Scope inherits from str via Region."""
-    return self == other and self.argext == other.argext and self.argcut == other.argcut
 
 
 def _all_regions(values):
@@ -126,8 +122,8 @@ def test_eval_repr(data0):
     Scope.default_data = data0
     for t in find_peaks(data0):
         assert _scope6(t) == eval(repr(_scope6(t))) == t
-        assert _region(t, data0) == eval(repr(_region(t, data0)))
-        assert _scope_equality(_scope(t, data0), eval(repr(_scope(t, data0))))
+        testing.assert_region_equal(_region(t, data0), eval(repr(_region(t, data0))))
+        testing.assert_scope_equal(_scope(t, data0), eval(repr(_scope(t, data0))))
     Region.default_data = None
     Scope.default_data = None
 

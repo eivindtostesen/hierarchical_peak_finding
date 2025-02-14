@@ -9,4 +9,4 @@ import peakoscope
 
 
 def test_version():
-    assert peakoscope.__version__ == "1.1.0.dev8"
+    assert peakoscope.__version__ == "1.1.0.dev9"

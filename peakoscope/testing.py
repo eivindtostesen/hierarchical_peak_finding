@@ -4,14 +4,31 @@
 # Peakoscope is licensed under GPLv3.
 """Python module for testing.
 
-Contains functions that assert expected tree properties.
-Input to the each of these functions
-can be either a Tree or HyperTree object.
+Collection of assertion functions for use in testing.
+
+Two of the functions assert equality between objects.
+The other 19 functions assert expected tree properties.
+Input to the each of these is either a Tree or a HyperTree object.
 
 """
 
 
 from itertools import chain
+from peakoscope.errors import PeakyBlunder
+
+
+# equality assertions:
+
+
+def assert_region_equal(self, other):
+    if self.values != other.values:
+        raise PeakyBlunder("Can not compare regions in different sequences.")
+    assert other.start == self.start and self.stop == other.stop
+
+
+def assert_scope_equal(self, other):
+    assert_region_equal(self, other)
+    assert self.argext == other.argext and self.argcut == other.argcut
 
 
 # Generic tree consistency assertions:
