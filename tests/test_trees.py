@@ -21,7 +21,7 @@ def tree(data0, request):
 
 
 def test_tree(tree):
-    """Test that Tree objects have all known behaviors."""
+    """Test that Tree objects pass peakoscope.testing."""
     testing.assert_iteration_produces_members(tree)
     testing.assert_leafs_have_no_children_and_root_has_no_parent(tree)
     testing.assert_parent_and_children_are_inverse_of_each_other(tree)
@@ -45,10 +45,25 @@ def test_tree(tree):
     # size filter:
     testing.assert_size_filter_equals_outermost_of_below_maxsize(tree)
     testing.assert_size_filter_equals_definition(tree)
-    # for 1D only:
-    assert_tree_nodes_are_nested_scopes(tree)
-    assert_main_children_keep_argext_lateral_children_move_away(tree)
-    assert_dict_of_dicts_of_same_length(tree)
+
+
+def test_tree_nodes_are_nested_scopes(tree):
+    assert all(x < tree.parent(x) for x in tree if tree.is_nonroot(x))
+    assert all(y < x for x in tree for y in tree.children(x))
+    assert all(tree.tip(x) <= x <= tree.full(x) <= tree.root() for x in tree)
+
+
+def test_main_children_keep_argext_lateral_children_move_away(tree):
+    assert all(x.argext == tree.parent(x).argext for x in tree.main_descendants())
+    assert all(x.argext != tree.parent(x).argext for x in tree.lateral_descendants())
+
+
+def test_dict_of_dicts_of_same_length(tree):
+    assert all(
+        len(tree) == len(d)
+        for (_, d) in tree.as_dict_of_dicts().items()
+        if type(d) == dict
+    )
 
 
 # test HyperTree objects (pairs of 1D trees):
@@ -64,7 +79,7 @@ def pair_of_trees(data1, data2, request):
 
 
 def test_hypertree(pair_of_trees):
-    """Test that HyperTree objects have all known behaviors."""
+    """Test that HyperTree objects pass peakoscope.testing."""
     t1, t2 = pair_of_trees
     testing.assert_iteration_produces_members(t1 @ t2)
     testing.assert_leafs_have_no_children_and_root_has_no_parent(t1 @ t2)
@@ -89,15 +104,58 @@ def test_hypertree(pair_of_trees):
     # size filter:
     testing.assert_size_filter_equals_outermost_of_below_maxsize(t1 @ t2)
     testing.assert_size_filter_equals_definition(t1 @ t2)
-    # for hypertree only:
-    assert_size_filter_equals_cartesian_product(t1 @ t2)
-    assert_parents_and_children_belong_to_tree(t1 @ t2)
-    assert_grid_nodes_belong_to_tree(t1 @ t2)
-    assert_leafs_belong_to_tree(t1 @ t2)
-    assert_parent_size_equals_minimum(t1 @ t2)
 
 
-# special tests:
+def test_parents_and_children_belong_to_tree(pair_of_trees):
+    """Proposition 4."""
+    tree = HyperTree(*pair_of_trees)
+    # parent in tree:
+    assert all(tree.parent(x) in tree for x in tree if tree.is_nonroot(x))
+    # children in tree:
+    assert all(x in tree for y in tree for x in tree.children(y))
+
+
+def test_grid_nodes_belong_to_tree(pair_of_trees):
+    """Proposition 7."""
+    tree = HyperTree(*pair_of_trees)
+    assert all(x in tree for x in tree.size_filter())
+
+
+def test_leafs_belong_to_tree(pair_of_trees):
+    tree = HyperTree(*pair_of_trees)
+    assert all(x in tree for x in tree.leaf_nodes())
+
+
+def test_parent_size_equals_minimum(pair_of_trees):
+    """Proposition 2."""
+    tree = HyperTree(*pair_of_trees)
+    assert all(
+        tree.size(tree.parent((a, b)))
+        == min(tree.L.size(tree.L.parent(a)), tree.R.size(tree.R.parent(b)))
+        for (a, b) in tree
+        if tree.L.is_nonroot(a) and tree.R.is_nonroot(b)
+    )
+
+
+@pytest.fixture(params=[0.0, 0.01, 0.2, 0.6, 2.0])
+def fraction(request):
+    return request.param
+
+
+def test_size_filter_equals_cartesian_product(pair_of_trees, monkeypatch, fraction):
+    tree = HyperTree(*pair_of_trees)
+    rootsize = tree.size(tree.root())
+    # output of size_filter:
+    by_cartesian_product = set(tree.size_filter(maxsize=fraction * rootsize))
+    # now change the algorithm behind size_filter:
+    monkeypatch.setattr(HyperTree, "size_filter", Tree.size_filter)
+    # output of size_filter reloaded:
+    by_recursion = set(tree.size_filter(maxsize=fraction * rootsize))
+    # output are equal as sets:
+    assert by_recursion == by_cartesian_product
+
+
+# special tests with special data:
 
 
 def test_non_linear_tree(zigzag_data):
@@ -143,72 +201,3 @@ def test_changing_the_node_type(data1):
     scope6_tree.set_nodes({s6: Scope.from_attrs(s6, data1) for s6 in scope6_tree})
     # now lists of nodes are equal:
     assert list(scope_tree) == list(scope6_tree)
-
-
-########### Consistency assertions: #################
-
-
-# for 1D only:
-
-
-def assert_tree_nodes_are_nested_scopes(tree):
-    assert all(x < tree.parent(x) for x in tree if tree.is_nonroot(x))
-    assert all(y < x for x in tree for y in tree.children(x))
-    assert all(tree.tip(x) <= x <= tree.full(x) <= tree.root() for x in tree)
-
-
-def assert_main_children_keep_argext_lateral_children_move_away(tree):
-    assert all(x.argext == tree.parent(x).argext for x in tree.main_descendants())
-    assert all(x.argext != tree.parent(x).argext for x in tree.lateral_descendants())
-
-
-def assert_dict_of_dicts_of_same_length(tree):
-    assert all(
-        len(tree) == len(d)
-        for (_, d) in tree.as_dict_of_dicts().items()
-        if type(d) == dict
-    )
-
-
-# for HyperTree only:
-
-
-def assert_parent_size_equals_minimum(tree):
-    """Proposition 2."""
-    assert all(
-        tree.size(tree.parent((a, b)))
-        == min(tree.L.size(tree.L.parent(a)), tree.R.size(tree.R.parent(b)))
-        for (a, b) in tree
-        if tree.L.is_nonroot(a) and tree.R.is_nonroot(b)
-    )
-
-
-def assert_parents_and_children_belong_to_tree(tree):
-    """Proposition 4."""
-    # parent in tree:
-    assert all(tree.parent(x) in tree for x in tree if tree.is_nonroot(x))
-    # children in tree:
-    assert all(x in tree for y in tree for x in tree.children(y))
-
-
-def assert_grid_nodes_belong_to_tree(tree):
-    """Proposition 7."""
-    assert all(x in tree for x in tree.size_filter())
-
-
-def assert_leafs_belong_to_tree(tree):
-    assert all(x in tree for x in tree.leaf_nodes())
-
-
-def assert_size_filter_equals_cartesian_product(tree, fractions=None):
-    if fractions is None:
-        fractions = (0.0, 0.01, 0.2, 0.6, 2.0)
-    rsize = tree.size(tree.root())
-    base_class_method = Tree.size_filter
-    overriding_method = HyperTree.size_filter
-    for maxsize in (fraction * rsize for fraction in fractions):
-        HyperTree.size_filter = base_class_method
-        by_recursion = set(tree.size_filter(maxsize=maxsize))
-        HyperTree.size_filter = overriding_method
-        by_cartesian_product = set(tree.size_filter(maxsize=maxsize))
-        assert by_recursion == by_cartesian_product
