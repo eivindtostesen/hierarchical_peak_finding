@@ -13,14 +13,17 @@ from peakoscope import find_peaks, find_valleys, Region, Scope, Scope6
 
 
 def _scope6(t):
+    """Convert tuple to Scope6."""
     return Scope6(*t)
 
 
 def _scope(t, values):
+    """Convert tuple to Scope."""
     return Scope.from_attrs(Scope6(*t), values)
 
 
 def _region(t, values):
+    """Convert tuple to Region."""
     return Region.from_attrs(Scope6(*t), values)
 
 
@@ -64,8 +67,6 @@ def test_corner_case(data0):
 def test_Region(data0):
     """Test some methods and attributes of Region objects.
 
-    Where: all possible regions
-    Objects: Region
     Attributes: size, max, min, argmax, argmin
     Methods: subarray
     Special methods: new, len, iter, contains
@@ -81,13 +82,7 @@ def test_Region(data0):
 
 
 def test_all_peaks_and_valleys_are_found(data0):
-    """Test that find_peaks and find_valleys find everything.
-
-    Where: all possible regions
-    Objects: Region
-    Methods: from_attrs, is_peak, is_valley
-    Special methods: new
-    """
+    """Test that find_peaks and find_valleys do not miss anything."""
     assert set(_peak_regions(data0)) == {r for r in _all_regions(data0) if r.is_peak()}
     assert set(_valley_regions(data0)) == {
         r for r in _all_regions(data0) if r.is_valley()
@@ -95,13 +90,7 @@ def test_all_peaks_and_valleys_are_found(data0):
 
 
 def test_all_local_extrema_are_found(data0):
-    """Test that find_peaks and find_valleys include all local extrema.
-
-    Where: all possible regions
-    Objects: Region
-    Methods: from_attrs, is_local_maximum, is_local_minimum
-    Special methods: new
-    """
+    """Test that find_peaks and find_valleys include all local extrema."""
     assert {r for r in _all_regions(data0) if r.is_local_maximum()} == {
         r for r in _peak_regions(data0) if r.is_local_maximum()
     }
@@ -111,13 +100,7 @@ def test_all_local_extrema_are_found(data0):
 
 
 def test_eval_repr(data0):
-    """Test that repr is readable by eval.
-
-    Where: peak regions
-    Objects: Scope6, Region, Scope
-    Methods: from_attrs
-    Special methods: repr
-    """
+    """Test that repr is readable by eval."""
     Region.default_data = data0
     Scope.default_data = data0
     for t in find_peaks(data0):
@@ -129,13 +112,7 @@ def test_eval_repr(data0):
 
 
 def test_horizontal_attributes(data0):
-    """Test attributes start, stop, istop.
-
-    Where: peak and valley regions
-    Objects: Scope6, Region, Scope
-    Attributes: start, stop, istop
-    Methods: from_attrs
-    """
+    """Test attributes start, stop, istop."""
     assert all(
         _scope(t, data0).start
         == _region(t, data0).start
@@ -151,13 +128,7 @@ def test_horizontal_attributes(data0):
 
 
 def test_vertical_attributes(data0):
-    """Test attributes max, min, argmax, argmin, extremum, cutoff, argext, argcut.
-
-    Where: peak and valley regions
-    Objects: Scope6, Region, Scope
-    Attributes: max, min, argmax, argmin, extremum, cutoff, argext, argcut
-    Methods: from_attrs
-    """
+    """Test attributes max, min, argmax, argmin, extremum, cutoff, argext, argcut."""
     assert all(
         _scope(t, data0).max
         == _region(t, data0).max

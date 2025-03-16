@@ -48,21 +48,22 @@ def test_tree(tree):
 
 
 def test_tree_nodes_are_nested_scopes(tree):
+    """Assert nesting of regions: parent > child and root > full > tip."""
     assert all(x < tree.parent(x) for x in tree if tree.is_nonroot(x))
     assert all(y < x for x in tree for y in tree.children(x))
     assert all(tree.tip(x) <= x <= tree.full(x) <= tree.root() for x in tree)
 
 
 def test_main_children_keep_argext_lateral_children_move_away(tree):
+    """Assert that main/lateral child has same/different argext as parent."""
     assert all(x.argext == tree.parent(x).argext for x in tree.main_descendants())
     assert all(x.argext != tree.parent(x).argext for x in tree.lateral_descendants())
 
 
 def test_dict_of_dicts_of_same_length(tree):
+    """Assert tree length equals dict sizes."""
     assert all(
-        len(tree) == len(d)
-        for (_, d) in tree.as_dict_of_dicts().items()
-        if type(d) == dict
+        len(tree) == len(d) for d in tree.as_dict_of_dicts().values() if type(d) == dict
     )
 
 
@@ -107,7 +108,10 @@ def test_hypertree(pair_of_trees):
 
 
 def test_parents_and_children_belong_to_tree(pair_of_trees):
-    """Proposition 4."""
+    """Assert that HyperTree parent and children methods produces tree nodes.
+
+    See also Proposition 4.
+    """
     tree = HyperTree(*pair_of_trees)
     # parent in tree:
     assert all(tree.parent(x) in tree for x in tree if tree.is_nonroot(x))
@@ -116,18 +120,25 @@ def test_parents_and_children_belong_to_tree(pair_of_trees):
 
 
 def test_grid_nodes_belong_to_tree(pair_of_trees):
-    """Proposition 7."""
+    """Assert that method HyperTree.size_filter produces tree nodes.
+
+    See also Proposition 7.
+    """
     tree = HyperTree(*pair_of_trees)
     assert all(x in tree for x in tree.size_filter())
 
 
 def test_leafs_belong_to_tree(pair_of_trees):
+    """Assert that method HyperTree.leaf_nodes produces tree nodes."""
     tree = HyperTree(*pair_of_trees)
     assert all(x in tree for x in tree.leaf_nodes())
 
 
 def test_parent_size_equals_minimum(pair_of_trees):
-    """Proposition 2."""
+    """Assert that HyperTree parent size is the smallest of L/R parent sizes.
+
+    See also Proposition 2.
+    """
     tree = HyperTree(*pair_of_trees)
     assert all(
         tree.size(tree.parent((a, b)))
@@ -142,7 +153,8 @@ def fraction(request):
     return request.param
 
 
-def test_size_filter_equals_cartesian_product(pair_of_trees, monkeypatch, fraction):
+def test_recursion_equals_cartesian_product(pair_of_trees, monkeypatch, fraction):
+    """Assert that two algorithms are equivalent."""
     tree = HyperTree(*pair_of_trees)
     rootsize = tree.size(tree.root())
     # output of size_filter:
@@ -151,7 +163,7 @@ def test_size_filter_equals_cartesian_product(pair_of_trees, monkeypatch, fracti
     monkeypatch.setattr(HyperTree, "size_filter", Tree.size_filter)
     # output of size_filter reloaded:
     by_recursion = set(tree.size_filter(maxsize=fraction * rootsize))
-    # output are equal as sets:
+    # output are equal as sets of nodes:
     assert by_recursion == by_cartesian_product
 
 
@@ -159,12 +171,12 @@ def test_size_filter_equals_cartesian_product(pair_of_trees, monkeypatch, fracti
 
 
 def test_non_linear_tree(zigzag_data):
-    """Test that zigzag data gives tree without linear nodes."""
+    """Assert that zigzag data gives tree without linear nodes."""
     assert len(list(peakoscope.tree(zigzag_data).linear_nodes())) == 0
 
 
 def test_eval_repr(data1):
-    """Test that repr is readable by eval."""
+    """Assert that tree repr is readable by eval."""
     Scope.default_data = data1
     tree = peakoscope.tree(data1)
     # Tree:
@@ -176,6 +188,7 @@ def test_eval_repr(data1):
 
 
 def test_children_are_sorted_by_extremum(data1):
+    """Assert peak children sorted by max, valley children sorted by min."""
     peaks = peakoscope.tree(data1)
     valleys = peakoscope.tree(data1, valleys=True)
     assert all(
@@ -191,6 +204,7 @@ def test_children_are_sorted_by_extremum(data1):
 
 
 def test_changing_the_node_type(data1):
+    """Test the method Tree.set_nodes."""
     # create tree with nodes of type Scope:
     scope_tree = peakoscope.tree(data1)
     # create tree with nodes of type Scope6:
