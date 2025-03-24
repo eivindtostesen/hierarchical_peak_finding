@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # This file is part of Peakoscope.
-# Copyright (C) 2021-2024  Eivind Tøstesen
+# Copyright (C) 2021-2025  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Python module for using polars in peak/valley analysis.
 
 Class TreePolars provides methods called dataframe, tree_structure,
@@ -55,7 +56,7 @@ class TreePolars(ChainedAttributes):
         objecttype=("node root parent full tip main_child").split(),
         **kwargs,
     ):
-        """Attach this pandas-aware object to a Tree."""
+        """Attach this polars-aware object to a Tree."""
         super().__init__()
         self.setattr(obj=tree, attrname=attrname)
         if X:

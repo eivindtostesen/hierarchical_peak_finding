@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # This file is part of Peakoscope.
-# Copyright (C) 2021-2024  Eivind Tøstesen
+# Copyright (C) 2021-2025  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Peakoscope package.
 
 Peakoscope is a python package for hierarchical analysis of peak and valley regions in numeric data.
@@ -24,17 +25,17 @@ From the tree, select default peak regions and print their subarrays of data:
 
 >>> for peak in tree(data).size_filter():
 ...    print(peak.subarray(data))
-... 
-[80]
-[70, 70]
+...
 [30, 40, 30]
+[70, 70]
+[80]
 
-Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under GPL-3.
+Copyright (C) 2021-2025 Eivind Tøstesen. This software is licensed under GPL-3.0-or-later.
 
 """
 
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 
 # Import names:

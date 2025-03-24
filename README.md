@@ -4,7 +4,7 @@
 
 Peakoscope is a python package for hierarchical analysis of peak and valley regions in numeric data.
 
-![peak plot](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/output.png?raw=true "fig, (peaks.plot.ax, valleys.plot.ax) = plt.subplots(2, 1, sharex=True, figsize=(4, 4));
+![peak plot](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.1.0/output.png?raw=true "fig, (peaks.plot.ax, valleys.plot.ax) = plt.subplots(2, 1, sharex=True, figsize=(4, 4));
 peaks.plot.crowns(peaks.size_filter(maxsize=7))
 peaks.plot.bounding_boxes(peaks.size_filter(maxsize=7))
 valleys.plot.crowns(valleys.size_filter(maxsize=7), facecolor='C9')
@@ -16,8 +16,8 @@ valleys.plot.ax.plot(X, Y, linewidth=2, color='black');")
 
 * Peak and valley regions can be nested, for example, when a large peak region contains smaller subpeak regions.
 * Based on a one-pass algorithm that finds all peak regions and orders them into a tree.
-* Classes for peak/valley objects and tree objects.
-* Optional interfaces to matplotlib, pandas and polars.
+* Classes for peak/valley and tree objects.
+* CLI and optional interfaces to matplotlib, pandas and polars.
 
 ## Usage examples
 Compute the tree of nested peak regions in a data set:
@@ -37,27 +37,27 @@ From the tree, select default peak regions and print their subarrays of data:
 >>> for peak in peakoscope.tree(data).size_filter():
 ...    print(peak.subarray(data))
 ... 
-[80]
-[70, 70]
 [30, 40, 30]
+[70, 70]
+[80]
 ```
 
-## Howto files
+## Documentation
 The github repo contains tutorials and a glossary:
-* [plotting_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/plotting_tutorial.ipynb)
-* [dataframes_tutorial.ipynb](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/dataframes_tutorial.ipynb)
-* [glossary.rst](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/glossary.rst)
+* [plotting_tutorial.ipynb](https://nbviewer.org/github/eivindtostesen/hierarchical_peak_finding/blob/v1.1.0/plotting_tutorial.ipynb)
+* [dataframes_tutorial.ipynb](https://nbviewer.org/github/eivindtostesen/hierarchical_peak_finding/blob/v1.1.0/dataframes_tutorial.ipynb)
+* [glossary.rst](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.1.0/glossary.rst)
 
 ## Authors
 * Eivind Tøstesen, <contact@tostesen.no>
 
 ## License
-Copyright (C) 2021-2024 Eivind Tøstesen. This software is licensed under [GPLv3](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.0.0/LICENSE?raw=true "included LICENSE file")
+Copyright (C) 2021-2025 Eivind Tøstesen. This software is licensed under [GPL-3.0-or-later](https://github.com/eivindtostesen/hierarchical_peak_finding/blob/v1.1.0/LICENSE?raw=true "included LICENSE file")
 
 ## Citation
 Citation can include one or more of:
 
-* Peakoscope + version
+* Peakoscope v1.1.0
 * Github URL: https://github.com/eivindtostesen/hierarchical_peak_finding
 * PyPI URL: https://pypi.org/project/peakoscope/
 * The open-access article:
