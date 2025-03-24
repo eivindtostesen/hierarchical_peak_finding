@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # This file is part of Peakoscope.
-# Copyright (C) 2021-2024  Eivind Tøstesen
+# Copyright (C) 2021-2025  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Command Line Interface.
 
 The CLI is run by running the package (using the -m flag).
@@ -12,7 +13,7 @@ Examples:
 Display version:
   $ python -m peakoscope --version
 
-Print peaks:  
+Print peaks:
   $ python -m peakoscope test.csv
   $ cat test.csv | python -m peakoscope -
   $ cat test.csv | python -m peakoscope

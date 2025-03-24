@@ -2,6 +2,7 @@
 # This file is part of Peakoscope.
 # Copyright (C) 2021-2025  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Python module for regions in a numeric sequence.
 
 The function find_peaks goes through an iterable of numbers
@@ -29,7 +30,7 @@ Find all peak regions in a data set:
 >>> data = [10, 30, 40, 30, 10, 50, 70, 70, 50, 80]
 >>> for p in find_peaks(data):
 ...     print(Scope6(*p))
-... 
+...
 Scope6(start=2, istop=2, argext=2, argcut=2, extremum=40, cutoff=40)
 Scope6(start=1, istop=3, argext=2, argcut=1, extremum=40, cutoff=30)
 Scope6(start=6, istop=7, argext=6, argcut=6, extremum=70, cutoff=70)

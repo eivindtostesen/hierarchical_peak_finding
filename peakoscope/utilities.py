@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # This file is part of Peakoscope.
-# Copyright (C) 2021-2024  Eivind Tøstesen
+# Copyright (C) 2021-2025  Eivind Tøstesen
 # Peakoscope is licensed under GPLv3.
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Python module containing tools and utilities.
 
 The class ChainedAttributes is a base class for writing classes
@@ -16,14 +17,14 @@ Create a naive object:
 
 >>> class Student:
 ...     pass
-... 
+...
 >>> student1 = Student()
 
 Give it an external object as a new attribute:
 
 >>> class Degree(ChainedAttributes):
 ...     pass
-... 
+...
 >>> degree1 = Degree().setattr(student1)
 >>> student1.degree == degree1
 True
