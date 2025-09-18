@@ -59,6 +59,51 @@ def tree_from_peaks(
     return parent, root, children, tip
 
 
+def forest_from_peaks(
+    peaks,
+    *,
+    presorted=False,
+    reverse=False,
+    getstart=attrgetter("start"),
+    getistop=attrgetter("istop"),
+    getcutoff=attrgetter("cutoff"),
+    getextremum=attrgetter("extremum"),
+    getargext=attrgetter("argext"),
+):
+    """Return (parent, roots, children, tip) from peak regions having start, istop, cutoff, extremum, argext."""
+
+    def sort_and_tuple(alist):
+        alist.sort(key=getstart)
+        alist.sort(key=getextremum, reverse=not reverse)
+        return tuple(alist)
+
+    parent = {}
+    children = {}
+    tip = {}
+    in_spe = []
+    if not presorted:
+        peaks = list(peaks)
+        # Order same as given by 'find_peaks' function:
+        peaks.sort(key=getcutoff, reverse=not reverse)
+        peaks.sort(key=getistop)
+    for p in peaks:
+        children[p] = []
+        while in_spe and getstart(p) <= getstart(in_spe[-1]):
+            c = in_spe.pop()
+            children[p].append(c)
+            parent[c] = p
+        children[p] = sort_and_tuple(children[p])
+        if children[p] and getargext(children[p][0]) == getargext(p):
+            tip[p] = tip[children[p][0]]
+        else:
+            tip[p] = p
+        in_spe.append(p)
+    roots = sort_and_tuple(in_spe)
+    for root in roots:
+        parent[root] = None
+    return parent, roots, children, tip
+
+
 # Classes:
 
 
