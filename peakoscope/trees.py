@@ -462,19 +462,23 @@ class Tree:
 
 
 class Forest:
-    """Tree of regions in univariate data.
+    """Trees of regions in univariate data.
 
-    A Tree represents the hierarchical nesting of
+    A Forest represents the hierarchical nesting of
     peak or valley regions in 1D data such as a sequence of numbers,
     a time series, a function y(x) or other univariate data.
 
-    A Tree is initialized with an iterable of regions
-    that have start, istop, cutoff, extremum. The regions
-    must be unique hashable objects to be used as dictionary keys.
+    A Forest is initialized with an iterable of regions
+    that have start, istop, cutoff, extremum, argext. The regions
+    must be unique hashable objects to be used as dictionary keys
+    and they become the tree nodes.
+
+    A Forest consists of zero, one or more trees with a root each.
+    But a Forest is a container of tree nodes, not trees.
 
     Notes
     -----
-    Background literature for the Tree class is
+    Background literature for the Forest class is
     the subsection titled "1D peaks" in the article [1]_.
 
     References
@@ -487,9 +491,9 @@ class Forest:
 
     @classmethod
     def from_peaks(cls, peaks, **kwargs):
-        """Return new Tree from iterable of peak regions."""
+        """Return new Forest from iterable of peak regions."""
         obj = cls.__new__(cls)
-        obj._parent, obj._root, obj._children, obj._tip = tree_from_peaks(
+        obj._parent, obj._roots, obj._children, obj._tip = forest_from_peaks(
             peaks, **kwargs
         )
         obj._find_full()
@@ -497,9 +501,9 @@ class Forest:
 
     @classmethod
     def from_valleys(cls, valleys, **kwargs):
-        """Return new Tree from iterable of valley regions."""
+        """Return new Forest from iterable of valley regions."""
         obj = cls.__new__(cls)
-        obj._parent, obj._root, obj._children, obj._tip = tree_from_peaks(
+        obj._parent, obj._roots, obj._children, obj._tip = forest_from_peaks(
             valleys, reverse=True, **kwargs
         )
         obj._find_full()
@@ -509,34 +513,56 @@ class Forest:
     def from_levels(cls, levelsdict, /):
         """Return new Tree from other tree's levels-dict."""
 
-        def leaf_and_tip(node):
-            children[node] = []
+        def _make_tip(node):
+            # full path shares this tip
             for n in obj.path(node, obj._full[node], obj.parent):
                 obj._tip[n] = node
+
+        def _make_leaf(node):
+            # has no children and is tip
+            children[node] = []
+            _make_tip(node)
+
+        def _make_root(node):
+            # has no parent and is full
+            obj._parent[node] = None
+            obj._full[node] = node
+            obj._roots.append(node)
 
         obj = cls.__new__(cls)
         obj._parent = {}
         children = {}
         obj._tip = {}
         obj._full = {}
+        obj._roots = []
+        stack = []
         for (A, a), (B, b) in pairwise(levelsdict.items()):
-            if a == 0:  # first item is the root:
-                obj._parent[A] = None
-                obj._full[A] = A
-                obj._root = A
+            if not stack:
+                _make_root(A)  # the first element is a root
                 stack = [A]
-            if b == a + 1:  # a subtree grows:
-                obj._full[B] = obj._full[A]
-                children[stack[-1]] = [B]  # B is the main child (of A)
-            else:  # (then a >= b) a subtree finishes:
-                del stack[b:]  # pop a slice
+            if b == 0:  # B is a root
+                _make_leaf(A)
+                _make_root(B)
+                stack = [B]
+            elif b == a + 1:
+                children[A] = [B]  # B is the first child of A
+                obj._parent[B] = A
+                if A.argext == stack[-1].argext:  # main path continues
+                    obj._full[B] = obj._full[A]
+                else:  # main path ends at A
+                    _make_tip(A)
+                    obj._full[B] = B
+                stack.append(B)
+            else:  # then a >= b > 0:
+                _make_leaf(A)  # A is a leaf and tip
                 obj._full[B] = B
+                del stack[b:]  # remove finished nodes
                 children[stack[-1]].append(B)  # B is a lateral child
-                leaf_and_tip(A)  # A is a leaf and tip
-            obj._parent[B] = stack[-1]
-            stack.append(B)
-        leaf_and_tip(B)  # the last B is a leaf and tip
+                obj._parent[B] = stack[-1]
+                stack.append(B)
+        _make_leaf(B)  # the last element is a leaf and tip
         obj._children = {p: tuple(c) for p, c in children.items()}
+        obj._roots = tuple(obj._roots)
         return obj
 
     def __init__(self, data):
@@ -554,13 +580,9 @@ class Forest:
         """Return number of nodes in the Tree."""
         return len(self._full)
 
-    def __matmul__(self, other):
-        """Return product self @ other (other is a Tree or HyperTree)."""
-        return HyperTree(self, other)
-
     def __repr__(self) -> str:
-        """Return string that can reconstruct the Tree."""
-        return f"Tree.from_levels({repr(dict(self.levels()))})"
+        """Return string that can reconstruct the Forest."""
+        return f"Forest.from_levels({repr(dict(self.levels()))})"
 
     def __str__(self):
         """Return tree as string using box drawing characters."""
@@ -584,45 +606,53 @@ class Forest:
 
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
+        rootsdict = {node: root for root in self._roots for node in self.subtree(root)}
         return {
             "_parent": self._parent,
             "_children": self._children,
             "_tip": self._tip,
             "_full": self._full,
-            "_root": self._root,
+            "_roots": rootsdict,
         }
 
     def set_nodes(self, changes={}):
-        """Replace Tree nodes by using given mapping."""
+        """Replace Forest nodes by using given mapping."""
 
-        def new(node):
+        def _new(node):
             return changes[node] if node in changes else node
 
-        self._tip = dict((new(x), new(y)) for (x, y) in self._tip.items())
-        self._full = dict((new(x), new(y)) for (x, y) in self._full.items())
-        self._parent = dict((new(x), new(y)) for (x, y) in self._parent.items())
+        self._tip = dict((_new(x), _new(y)) for (x, y) in self._tip.items())
+        self._full = dict((_new(x), _new(y)) for (x, y) in self._full.items())
+        self._parent = dict((_new(x), _new(y)) for (x, y) in self._parent.items())
         self._children = dict(
-            (new(x), tuple(new(z) for z in y)) for (x, y) in self._children.items()
+            (_new(x), tuple(_new(z) for z in y)) for (x, y) in self._children.items()
         )
-        self._root = new(self._root)
+        self._roots = tuple(_new(root) for root in self._roots)
         return None
 
     def levels(self, localroot=None, level=0):
-        """Yield ordered sequence of (node, level) tuples (root is zero level)."""
+        """Yield ordered sequence of (node, level) tuples (roots are zero level)."""
         # defaults:
         if localroot is None:
-            localroot = self.root()
-        yield (localroot, level)
-        for child in self.children(localroot):
-            yield from self.levels(child, level + 1)
+            roots = self.roots()
+        else:
+            roots = (localroot,)
+        for root in roots:
+            yield (root, level)
+            for child in self.children(root):
+                yield from self.levels(child, level + 1)
 
     def root(self):
-        """Return the root node of the Tree."""
-        return self._root
+        """Return root if one tree else None."""
+        return self._roots[0] if len(self._roots) == 1 else None
+
+    def roots(self):
+        """Return tuple of roots of trees in forest."""
+        return self._roots
 
     def is_nonroot(self, node):
         """Return True if the given node has a parent."""
-        return node != self._root
+        return node not in self._roots
 
     def tip(self, node):
         """Return the smallest region with same argext as the given node."""
@@ -630,7 +660,7 @@ class Forest:
 
     def has_children(self, node):
         """Return True if the given node has sub regions."""
-        return node != self._tip[node]
+        return bool(self._children[node])
 
     def size(self, node):
         """Return vertical size of given node (max minus min)."""
@@ -646,14 +676,17 @@ class Forest:
 
     def main_child(self, node):
         """Return child of given node with same argext, or None."""
-        if self.has_children(node):
-            return self.children(node)[0]
-        else:
+        if node == self._tip[node]:
             return None
+        else:
+            return self._children[node][0]
 
     def lateral(self, node):
         """Return ordered tuple of the given node's lateral children."""
-        return self.children(node)[1:]
+        if node == self._tip[node]:
+            return self._children[node]
+        else:
+            return self._children[node][1:]
 
     def full(self, node):
         """Return the largest region with same argext as the given node."""
@@ -676,98 +709,108 @@ class Forest:
 
     def root_path(self, node):
         """Yield nodes on the parent path from given node to its root."""
-        yield from self.path(node, self.root(), self.parent)
+        yield node
+        while self.is_nonroot(node):
+            node = self.parent(node)
+            yield node
 
     def main_path(self, node):
         """Yield nodes on the main_child path from given node to its tip."""
         yield from self.path(node, self.tip(node), self.main_child)
 
     def subtree(self, localroot=None):
-        """Yield all nodes in the given subtree."""
+        """Yield all nodes in forest or given subtree."""
         # defaults:
         if localroot is None:
-            localroot = self.root()
-        yield localroot
-        for child in self.children(localroot):
-            yield from self.subtree(child)
+            roots = self.roots()
+        else:
+            roots = (localroot,)
+        for root in roots:
+            yield root
+            for child in self.children(root):
+                yield from self.subtree(child)
 
     def main_descendants(self, localroot=None):
-        """Yield main child nodes in the given subtree."""
+        """Yield main child nodes in forest or given subtree."""
         # defaults:
         if localroot is None:
-            localroot = self.root()
-        if self.has_children(localroot):
-            yield self.main_child(localroot)
-            for child in self.children(localroot):
+            roots = self.roots()
+        else:
+            roots = (localroot,)
+        for root in roots:
+            if (mc := self.main_child(root)) is not None:
+                yield mc
+            for child in self.children(root):
                 yield from self.main_descendants(child)
 
     def lateral_descendants(self, localroot=None):
-        """Yield lateral child nodes in the given subtree."""
+        """Yield lateral child nodes in forest or given subtree."""
         # defaults:
         if localroot is None:
-            localroot = self.root()
-        if self.has_children(localroot):
-            yield from self.lateral(localroot)
-            for child in self.children(localroot):
+            roots = self.roots()
+        else:
+            roots = (localroot,)
+        for root in roots:
+            yield from self.lateral(root)
+            for child in self.children(root):
                 yield from self.lateral_descendants(child)
 
     def full_nodes(self, localroot=None):
-        """Yield full nodes in the given subtree."""
+        """Yield full nodes in forest or given subtree."""
         # defaults:
         if localroot is None:
-            localroot = self.root()
-        if localroot == self.full(localroot):
+            yield from self.roots()
+        elif localroot == self.full(localroot):
             yield localroot
         yield from self.lateral_descendants(localroot)
 
     def leaf_nodes(self, localroot=None):
-        """Yield subtree nodes that have no children."""
-        # defaults:
-        if localroot is None:
-            localroot = self.root()
+        """Yield forest or subtree nodes that have no children."""
         return (
             node for node in self.subtree(localroot) if len(self.children(node)) == 0
         )
 
     def branch_nodes(self, localroot=None):
-        """Yield subtree nodes that have two or more children."""
-        # defaults:
-        if localroot is None:
-            localroot = self.root()
+        """Yield forest or subtree nodes that have two or more children."""
         return (
             node for node in self.subtree(localroot) if len(self.children(node)) > 1
         )
 
     def linear_nodes(self, localroot=None):
-        """Yield subtree nodes that have one child."""
-        # defaults:
-        if localroot is None:
-            localroot = self.root()
+        """Yield forest or subtree nodes that have one child."""
         return (
             node for node in self.subtree(localroot) if len(self.children(node)) == 1
         )
 
     def size_filter(self, localroot=None, *, maxsize=None):
-        """Yield subtree nodes filtered by size."""
+        """Yield forest or subtree nodes filtered by size."""
         # defaults:
         if localroot is None:
-            localroot = self.root()
+            roots = self.roots()
+        else:
+            roots = (localroot,)
         if maxsize is None:
-            maxsize = 0.2 * self.size(self.root())
+            maxsize = 0.2 * max(self.size(root) for root in self.roots())
         # The 'MAXDEEP algorithm' in reverse:
-        for climber in self.main_path(localroot):
-            if self.size(climber) >= maxsize:
-                for child in self.lateral(climber):
-                    yield from self.size_filter(maxsize=maxsize, localroot=child)
-            elif climber == self.root() or self.size(self.parent(climber)) >= maxsize:
-                yield climber
-                break
+        for root in roots:
+            for climber in self.main_path(root):
+                if self.size(climber) >= maxsize:
+                    for child in self.lateral(climber):
+                        yield from self.size_filter(maxsize=maxsize, localroot=child)
+                elif (
+                    not self.is_nonroot(climber)
+                    or self.size(self.parent(climber)) >= maxsize
+                ):
+                    yield climber
+                    break
 
     def innermost(self, nodes, localroot=None):
         """Yield innermost nodes of the given nodes."""
         # defaults:
         if localroot is None:
-            localroot = self.root()
+            roots = self.roots()
+        else:
+            roots = (localroot,)
         filter = list(nodes)
         countdown = {n: len(self.children(n)) for n in self.subtree(localroot)}
 
@@ -775,7 +818,7 @@ class Forest:
         def _yield_or_propagate(node):
             if node in filter:
                 yield node
-            elif node != localroot:
+            elif node not in roots:
                 parent = self.parent(node)
                 countdown[parent] -= 1
                 if countdown[parent] == 0:
@@ -788,30 +831,33 @@ class Forest:
         """Yield outermost nodes of the given nodes."""
         # defaults:
         if localroot is None:
-            localroot = self.root()
+            roots = self.roots()
+        else:
+            roots = (localroot,)
         filter = list(nodes)
 
         # Recursive "top-down" search via children:
         def _yield_or_branch(node):
             if node in filter:
                 yield node
-            elif self.has_children(node):
+            else:
                 for child in self.children(node):
                     yield from _yield_or_branch(child)
 
-        yield from _yield_or_branch(localroot)
+        for root in roots:
+            yield from _yield_or_branch(root)
 
     # Initialization algorithms:
 
     def _find_full(self):
         """Compute attribute: self._full."""
 
-        def fullnodes():
-            yield self.root()
+        def _fullnodes():
+            yield from self.roots()
             yield from self.lateral_descendants()
 
         self._full = {
-            node: full for full in fullnodes() for node in self.main_path(full)
+            node: full for full in _fullnodes() for node in self.main_path(full)
         }
 
 
