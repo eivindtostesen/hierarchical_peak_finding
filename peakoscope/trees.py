@@ -266,6 +266,10 @@ class Tree:
         """Return the root node of the Tree."""
         return self._root
 
+    def roots(self):
+        """Return tuple with the root node of the Tree."""
+        return (self.root(),)
+
     def is_nonroot(self, node):
         """Return True if the given node has a parent."""
         return node != self._root

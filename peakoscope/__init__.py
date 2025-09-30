@@ -35,7 +35,7 @@ Copyright (C) 2021-2025 Eivind Tøstesen. This software is licensed under GPL-3.
 """
 
 
-__version__ = "1.2.0.dev3"
+__version__ = "1.2.0.dev4"
 
 
 # Import names:
@@ -48,17 +48,18 @@ from peakoscope.data import example_1, example_2
 
 
 # Wrapper function:
-def tree(data, *, valleys=False):
-    """Find all peaks (or valleys) in data and return their Tree."""
+def tree(data, *, valleys=False, forest=False):
+    """Return a tree of all peaks (or valleys) in data."""
+    treeclass = Forest if forest else Tree
     if valleys:
-        return Tree.from_valleys(
+        return treeclass.from_valleys(
             map(
                 lambda t: Scope.from_attrs(Scope6(*t), data),
                 find_valleys(data),
             )
         )
     else:
-        return Tree.from_peaks(
+        return treeclass.from_peaks(
             map(
                 lambda t: Scope.from_attrs(Scope6(*t), data),
                 find_peaks(data),

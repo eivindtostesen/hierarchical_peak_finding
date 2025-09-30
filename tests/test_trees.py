@@ -9,20 +9,20 @@ import pytest
 from operator import attrgetter
 import peakoscope
 import peakoscope.testing as testing
-from peakoscope import Tree, HyperTree, Scope, Scope6, find_peaks
+from peakoscope import Tree, Forest, HyperTree, Scope, Scope6, find_peaks
 
 
-# test Tree objects (one-dimensional):
+# test Tree and Forest objects (one-dimensional):
 
 
-@pytest.fixture(params=[True, False])
+@pytest.fixture(params=[(True, True), (False, True), (True, False), (False, False)])
 def tree(data0, request):
-    valleys = request.param
-    return peakoscope.tree(data0, valleys=valleys)
+    valleys, forest = request.param
+    return peakoscope.tree(data0, valleys=valleys, forest=forest)
 
 
 def test_tree(tree):
-    """Test that Tree objects pass peakoscope.testing."""
+    """Test that Tree (or Forest) objects pass peakoscope.testing."""
     testing.assert_iteration_produces_members(tree)
     testing.assert_leafs_have_no_children_and_root_has_no_parent(tree)
     testing.assert_parent_and_children_are_inverse_of_each_other(tree)
@@ -180,8 +180,11 @@ def test_eval_repr(data1):
     """Assert that tree repr is readable by eval."""
     Scope.default_data = data1
     tree = peakoscope.tree(data1)
+    forest = peakoscope.tree(data1, forest=True)
     # Tree:
     assert repr(tree) == repr(eval(repr(tree)))
+    # Forest:
+    assert repr(forest) == repr(eval(repr(forest)))
     # HyperTree:
     assert repr(tree @ tree) == repr(eval(repr(tree @ tree)))
     assert repr(tree @ tree @ tree) == repr(eval(repr(tree @ tree @ tree)))
