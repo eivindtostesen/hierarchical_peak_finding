@@ -70,14 +70,13 @@ def forest_from_peaks(
     getextremum=attrgetter("extremum"),
     getargext=attrgetter("argext"),
 ):
-    """Return (parent, roots, children, tip) from peak regions having start, istop, cutoff, extremum, argext."""
+    """Return (roots, children, tip) from peak regions having start, istop, cutoff, extremum, argext."""
 
-    def sort_and_tuple(alist):
+    def sorted_tuple(alist):
         alist.sort(key=getstart)
         alist.sort(key=getextremum, reverse=not reverse)
         return tuple(alist)
 
-    parent = {}
     children = {}
     tip = {}
     in_spe = []
@@ -91,17 +90,14 @@ def forest_from_peaks(
         while in_spe and getstart(p) <= getstart(in_spe[-1]):
             c = in_spe.pop()
             children[p].append(c)
-            parent[c] = p
-        children[p] = sort_and_tuple(children[p])
+        children[p] = sorted_tuple(children[p])
         if children[p] and getargext(children[p][0]) == getargext(p):
             tip[p] = tip[children[p][0]]
         else:
             tip[p] = p
         in_spe.append(p)
-    roots = sort_and_tuple(in_spe)
-    for root in roots:
-        parent[root] = None
-    return parent, roots, children, tip
+    roots = sorted_tuple(in_spe)
+    return roots, children, tip
 
 
 # Classes:
@@ -130,6 +126,11 @@ class Tree:
        Biology 3, 10 (2008).
        Open access: https://doi.org/10.1186/1748-7188-3-10
     """
+
+    # Class variables and class methods:
+
+    getcutoff = attrgetter("cutoff")
+    getextremum = attrgetter("extremum")
 
     @classmethod
     def from_peaks(cls, peaks, **kwargs):
@@ -284,7 +285,7 @@ class Tree:
 
     def size(self, node):
         """Return vertical size of given node (max minus min)."""
-        return abs(node.extremum - node.cutoff)
+        return abs(Tree.getextremum(node) - Tree.getcutoff(node))
 
     def parent(self, node):
         """Return the parent (containing region) or None."""
@@ -493,29 +494,33 @@ class Forest:
        Open access: https://doi.org/10.1186/1748-7188-3-10
     """
 
+    # Class variables and class methods:
+
+    getcutoff = attrgetter("cutoff")
+    getextremum = attrgetter("extremum")
+    getargext = attrgetter("argext")
+
     @classmethod
     def from_peaks(cls, peaks, **kwargs):
         """Return new Forest from iterable of peak regions."""
         obj = cls.__new__(cls)
-        obj._parent, obj._roots, obj._children, obj._tip = forest_from_peaks(
-            peaks, **kwargs
-        )
-        obj._find_full()
+        obj._roots, obj._children, obj._tip = forest_from_peaks(peaks, **kwargs)
+        obj._find_full_parent()
         return obj
 
     @classmethod
     def from_valleys(cls, valleys, **kwargs):
         """Return new Forest from iterable of valley regions."""
         obj = cls.__new__(cls)
-        obj._parent, obj._roots, obj._children, obj._tip = forest_from_peaks(
+        obj._roots, obj._children, obj._tip = forest_from_peaks(
             valleys, reverse=True, **kwargs
         )
-        obj._find_full()
+        obj._find_full_parent()
         return obj
 
     @classmethod
     def from_levels(cls, levelsdict, /):
-        """Return new Tree from other tree's levels-dict."""
+        """Return new Forest from other forest's levels-dict."""
 
         def _make_tip(node):
             # full path shares this tip
@@ -551,7 +556,9 @@ class Forest:
             elif b == a + 1:
                 children[A] = [B]  # B is the first child of A
                 obj._parent[B] = A
-                if A.argext == stack[-1].argext:  # main path continues
+                if Forest.getargext(A) == Forest.getargext(
+                    stack[-1]
+                ):  # main path continues
                     obj._full[B] = obj._full[A]
                 else:  # main path ends at A
                     _make_tip(A)
@@ -568,6 +575,8 @@ class Forest:
         obj._children = {p: tuple(c) for p, c in children.items()}
         obj._roots = tuple(obj._roots)
         return obj
+
+    # dunder methods:
 
     def __init__(self, data):
         pass  # TODO
@@ -608,6 +617,8 @@ class Forest:
                 indent.append("│ ")
         return "\n".join(lines)
 
+    # whole forest methods:
+
     def as_dict_of_dicts(self):
         """Return data attributes as a dict of dicts."""
         rootsdict = {node: root for root in self._roots for node in self.subtree(root)}
@@ -634,17 +645,7 @@ class Forest:
         self._roots = tuple(_new(root) for root in self._roots)
         return None
 
-    def levels(self, localroot=None, level=0):
-        """Yield ordered sequence of (node, level) tuples (roots are zero level)."""
-        # defaults:
-        if localroot is None:
-            roots = self.roots()
-        else:
-            roots = (localroot,)
-        for root in roots:
-            yield (root, level)
-            for child in self.children(root):
-                yield from self.levels(child, level + 1)
+    # node methods:
 
     def root(self):
         """Return root if one tree else None."""
@@ -668,7 +669,7 @@ class Forest:
 
     def size(self, node):
         """Return vertical size of given node (max minus min)."""
-        return abs(node.extremum - node.cutoff)
+        return abs(Forest.getextremum(node) - Forest.getcutoff(node))
 
     def parent(self, node):
         """Return the parent (containing region) or None."""
@@ -696,12 +697,7 @@ class Forest:
         """Return the largest region with same argext as the given node."""
         return self._full[node]
 
-    def _index(self, node):
-        """Return the zero-based index of the given node."""
-        # accessing the preserved insertion order:
-        return list(self._full).index(node)
-
-    # public recursive algorithms:
+    # generator methods (yielding nodes):
 
     def path(self, start, istop, step):
         """Yield nodes on a path in the tree."""
@@ -733,6 +729,18 @@ class Forest:
             yield root
             for child in self.children(root):
                 yield from self.subtree(child)
+
+    def levels(self, localroot=None, level=0):
+        """Yield ordered sequence of (node, level) tuples (roots are zero level)."""
+        # defaults:
+        if localroot is None:
+            roots = self.roots()
+        else:
+            roots = (localroot,)
+        for root in roots:
+            yield (root, level)
+            for child in self.children(root):
+                yield from self.levels(child, level + 1)
 
     def main_descendants(self, localroot=None):
         """Yield main child nodes in forest or given subtree."""
@@ -851,18 +859,31 @@ class Forest:
         for root in roots:
             yield from _yield_or_branch(root)
 
-    # Initialization algorithms:
+    # Implementation details (may change):
 
-    def _find_full(self):
-        """Compute attribute: self._full."""
+    def _index(self, node):
+        """Return the zero-based index of the given node."""
+        # accessing the preserved insertion order:
+        return list(self._full).index(node)
 
-        def _fullnodes():
-            yield from self.roots()
-            yield from self.lateral_descendants()
+    def _find_full_parent(self):
+        """Compute attributes: self._full self._parent."""
 
-        self._full = {
-            node: full for full in _fullnodes() for node in self.main_path(full)
-        }
+        def _make_parent(node):
+            for child in self.children(node):
+                self._parent[child] = node
+                if self.tip(node) == self.tip(child):
+                    self._full[child] = self._full[node]
+                else:
+                    self._full[child] = child
+                _make_parent(child)
+
+        self._parent = {}
+        self._full = {}
+        for root in self.roots():
+            self._parent[root] = None
+            self._full[root] = root
+            _make_parent(root)
 
 
 class HyperTree(Tree):
