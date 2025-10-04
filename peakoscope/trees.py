@@ -129,6 +129,8 @@ class Tree:
 
     # Class variables and class methods:
 
+    getstart = attrgetter("start")
+    getistop = attrgetter("istop")
     getcutoff = attrgetter("cutoff")
     getextremum = attrgetter("extremum")
 
@@ -186,8 +188,18 @@ class Tree:
         obj._children = {p: tuple(c) for p, c in children.items()}
         return obj
 
-    def __init__(self, data):
-        pass  # TODO
+    def __init__(self, peaks, *, are_valleys=False, presorted=False):
+        """Initialize Tree from iterable of peak (or valley) regions."""
+        self._parent, self._root, self._children, self._tip = tree_from_peaks(
+            peaks,
+            presorted=presorted,
+            reverse=are_valleys,
+            getstart=Tree.getstart,
+            getistop=Tree.getistop,
+            getcutoff=Tree.getcutoff,
+            getextremum=Tree.getextremum,
+        )
+        self._find_full()
 
     def __contains__(self, node):
         """Return True if the input is a node in the Tree."""
@@ -496,6 +508,8 @@ class Forest:
 
     # Class variables and class methods:
 
+    getstart = attrgetter("start")
+    getistop = attrgetter("istop")
     getcutoff = attrgetter("cutoff")
     getextremum = attrgetter("extremum")
     getargext = attrgetter("argext")
@@ -504,6 +518,7 @@ class Forest:
     def from_peaks(cls, peaks, **kwargs):
         """Return new Forest from iterable of peak regions."""
         obj = cls.__new__(cls)
+        obj.are_valleys = False
         obj._roots, obj._children, obj._tip = forest_from_peaks(peaks, **kwargs)
         obj._find_full_parent()
         return obj
@@ -512,6 +527,7 @@ class Forest:
     def from_valleys(cls, valleys, **kwargs):
         """Return new Forest from iterable of valley regions."""
         obj = cls.__new__(cls)
+        obj.are_valleys = True
         obj._roots, obj._children, obj._tip = forest_from_peaks(
             valleys, reverse=True, **kwargs
         )
@@ -519,7 +535,7 @@ class Forest:
         return obj
 
     @classmethod
-    def from_levels(cls, levelsdict, /):
+    def from_levels(cls, levelsdict, /, *, are_valleys=False):
         """Return new Forest from other forest's levels-dict."""
 
         def _make_tip(node):
@@ -539,6 +555,7 @@ class Forest:
             obj._roots.append(node)
 
         obj = cls.__new__(cls)
+        obj.are_valleys = are_valleys
         obj._parent = {}
         children = {}
         obj._tip = {}
@@ -578,27 +595,39 @@ class Forest:
 
     # dunder methods:
 
-    def __init__(self, data):
-        pass  # TODO
+    def __init__(self, peaks, *, are_valleys=False, presorted=False):
+        """Initialize Forest from iterable of peak (or valley) regions."""
+        self.are_valleys = are_valleys
+        self._roots, self._children, self._tip = forest_from_peaks(
+            peaks,
+            presorted=presorted,
+            reverse=are_valleys,
+            getstart=Forest.getstart,
+            getistop=Forest.getistop,
+            getcutoff=Forest.getcutoff,
+            getextremum=Forest.getextremum,
+            getargext=Forest.getargext,
+        )
+        self._find_full_parent()
 
     def __contains__(self, node):
-        """Return True if the input is a node in the Tree."""
+        """Return True if the input is a node in the Forest."""
         return node in self._full
 
     def __iter__(self):
-        """Iterate over nodes in the Tree."""
+        """Iterate over nodes in the Forest."""
         return iter(self._full)
 
     def __len__(self):
-        """Return number of nodes in the Tree."""
+        """Return number of nodes in the Forest."""
         return len(self._full)
 
     def __repr__(self) -> str:
         """Return string that can reconstruct the Forest."""
-        return f"Forest.from_levels({repr(dict(self.levels()))})"
+        return f"Forest.from_levels({repr(dict(self.levels()))}, are_valleys={self.are_valleys})"
 
     def __str__(self):
-        """Return tree as string using box drawing characters."""
+        """Return Forest as string using box drawing characters."""
         indent = [""]
         lines = []
         for node, level in self.levels():
@@ -616,6 +645,30 @@ class Forest:
                 lines.append("".join([*indent, "├─", str(node)]))
                 indent.append("│ ")
         return "\n".join(lines)
+
+    def __sub__(self, other):
+        """Return new Forest of nodes in self not other (difference)."""
+        return Forest(
+            set(self) - set(other), are_valleys=self.are_valleys, presorted=False
+        )
+
+    def __and__(self, other):
+        """Return new Forest of nodes in self and other (intersection)."""
+        return Forest(
+            set(self) & set(other), are_valleys=self.are_valleys, presorted=False
+        )
+
+    def __or__(self, other):
+        """Return new Forest of nodes in self or other (union)."""
+        return Forest(
+            set(self) | set(other), are_valleys=self.are_valleys, presorted=False
+        )
+
+    def __xor__(self, other):
+        """Return new Forest of nodes in either self or other (symmetric difference)."""
+        return Forest(
+            set(self) ^ set(other), are_valleys=self.are_valleys, presorted=False
+        )
 
     # whole forest methods:
 
