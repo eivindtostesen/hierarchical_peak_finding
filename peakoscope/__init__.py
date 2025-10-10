@@ -35,7 +35,7 @@ Copyright (C) 2021-2025 Eivind Tøstesen. This software is licensed under GPL-3.
 """
 
 
-__version__ = "1.2.0.dev6"
+__version__ = "1.2.0.dev7"
 
 
 # Import names:

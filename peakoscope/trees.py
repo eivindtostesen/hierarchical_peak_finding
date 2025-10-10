@@ -1121,3 +1121,187 @@ class HyperTree(Tree):
     def _find_full(self):
         """Return that it is NotImplemented."""
         return NotImplemented
+
+
+class HyperForest(Forest):
+    """Tree of higher-dimensional regions.
+
+    A HyperTree represents the hierarchical nesting of peak regions
+    or valley regions in more dimensions, such as a mountain landscape
+    with height z as a function of x and y.
+
+    A HyperTree assumes dimensional decoupling, i.e. the landscape is a
+    sum z(x,y) = f(x) + g(y) or a product z(x,y) = f(x) * g(y).
+
+    A HyperTree is constructed as a pair of trees that are
+    of type Tree or HyperTree.
+
+    A HyperTree is a kind of product tree, but it is not the Cartesian
+    product.
+
+    Notes
+    -----
+    Background literature for the HyperTree class is
+    the subsection titled "2D peaks" in the article [1]_.
+
+    References
+    ----------
+    .. [1] Tostesen, E. "A stitch in time: Efficient computation of
+       genomic DNA melting bubbles." Algorithms for Molecular
+       Biology 3, 10 (2008).
+       Open access: https://doi.org/10.1186/1748-7188-3-10
+    """
+
+    def __init__(self, left_tree, right_tree):
+        self.L = left_tree
+        self.R = right_tree
+
+    def __contains__(self, pair):
+        """Return True if the input is a node in the HyperTree."""
+        a, b = pair
+        # test if (a, b) is 'parent-above':
+        return (
+            a == self.L.root() or self.L.size(self.L.parent(a)) > self.R.size(b)
+        ) and (b == self.R.root() or self.R.size(self.R.parent(b)) > self.L.size(a))
+
+    def __iter__(self):
+        """Iterate over nodes in the HyperTree."""
+        yield from self.subtree()
+
+    def __len__(self):
+        """Return number of nodes in the HyperTree."""
+        return len(list(self.__iter__()))
+
+    def __repr__(self) -> str:
+        """Return string that can reconstruct the HyperTree."""
+        return f"HyperTree({repr(self.L)}, {repr(self.R)})"
+
+    def root(self):
+        """Return the root node of the HyperTree."""
+        return (self.L.root(), self.R.root())
+
+    def is_nonroot(self, node):
+        """Return True if given node has a parent."""
+        a, b = node
+        return self.L.is_nonroot(a) or self.R.is_nonroot(b)
+
+    def tip(self, node):
+        """Return the given node's tip node."""
+        a, b = node
+        return (self.L.tip(a), self.R.tip(b))
+
+    def has_children(self, node):
+        """Return True if given node has children."""
+        a, b = node
+        return self.L.has_children(a) or self.R.has_children(b)
+
+    def size(self, node):
+        """Return the given node's size."""
+        a, b = node
+        return max(self.L.size(a), self.R.size(b))
+
+    def parent(self, node):
+        """Return the given node's parent or None."""
+        a, b = node
+        if self.L.is_nonroot(a) and self.R.is_nonroot(b):
+            pa, pb = self.L.parent(a), self.R.parent(b)
+            if self.L.size(pa) > self.R.size(pb):
+                return (a, pb)
+            elif self.L.size(pa) < self.R.size(pb):
+                return (pa, b)
+            elif self.L.size(pa) == self.R.size(pb):
+                return (pa, pb)
+        elif not self.L.is_nonroot(a) and not self.R.is_nonroot(b):
+            return None
+        elif self.L.is_nonroot(a):
+            # then b is root
+            return (self.L.parent(a), b)
+        else:
+            # then a is root and b nonroot
+            return (a, self.R.parent(b))
+
+    def children(self, node):
+        """Return the given node's children."""
+        a, b = node
+        if not self.has_children(node):
+            return ()
+        elif self.L.size(a) > self.R.size(b):
+            return tuple((ca, b) for ca in self.L.children(a))
+        elif self.L.size(a) < self.R.size(b):
+            return tuple((a, cb) for cb in self.R.children(b))
+        elif self.L.size(a) == self.R.size(b):
+            return tuple(
+                (ca, cb) for ca in self.L.children(a) for cb in self.R.children(b)
+            )
+
+    def main_child(self, node):
+        """Return the main child (the child that has the same tip)."""
+        a, b = node
+        if not self.has_children(node):
+            return None
+        elif self.L.size(a) > self.R.size(b):
+            return (self.L.main_child(a), b)
+        elif self.L.size(a) < self.R.size(b):
+            return (a, self.R.main_child(b))
+        elif self.L.size(a) == self.R.size(b):
+            return (self.L.main_child(a), self.R.main_child(b))
+
+    def full(self, node):
+        """Return the largest node with same tip as given node."""
+        climber = node
+        while self.is_nonroot(climber) and self.tip(climber) == self.tip(
+            nextstep := self.parent(climber)
+        ):
+            climber = nextstep
+        return climber
+
+    def _index(self, node):
+        """Return a tuple of (nested) indices for given node."""
+        a, b = node
+        return self.L._index(a), self.R._index(b)
+
+    def leaf_nodes(self, localroot=None):
+        """Yield leaf nodes."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        ra, rb = localroot
+        for a in self.L.leaf_nodes(localroot=ra):
+            for b in self.R.leaf_nodes(localroot=rb):
+                yield a, b
+
+    def size_filter(self, localroot=None, *, maxsize=None):
+        """Yield grid nodes in given subtree."""
+        # defaults:
+        if localroot is None:
+            localroot = self.root()
+        if maxsize is None:
+            maxsize = 0.2 * max(self.L.size(self.L.root()), self.R.size(self.R.root()))
+        ra, rb = localroot
+        for a in self.L.size_filter(maxsize=maxsize, localroot=ra):
+            for b in self.R.size_filter(maxsize=maxsize, localroot=rb):
+                yield a, b
+
+    def from_peaks(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def from_valleys(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def from_levels(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def as_dict_of_dicts(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def set_nodes(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def _find_full(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
