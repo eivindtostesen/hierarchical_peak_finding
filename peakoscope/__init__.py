@@ -35,7 +35,7 @@ Copyright (C) 2021-2025 Eivind Tøstesen. This software is licensed under GPL-3.
 """
 
 
-__version__ = "1.2.0.dev7"
+__version__ = "1.2.0.dev8"
 
 
 # Import names:
@@ -51,11 +51,10 @@ from peakoscope.data import example_1, example_2
 def tree(data, *, valleys=False, forest=False):
     """Return a tree of all peaks (or valleys) in data."""
     treeclass = Forest if forest else Tree
+    _pipe1 = find_peaks(data, reverse=valleys)
+    _pipe2 = map(lambda t: Scope.from_attrs(Scope6(*t), data), _pipe1)
     return treeclass(
-        map(
-            lambda t: Scope.from_attrs(Scope6(*t), data),
-            find_peaks(data, reverse=valleys),
-        ),
+        _pipe2,
         are_valleys=valleys,
         presorted=True,
     )

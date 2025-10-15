@@ -646,6 +646,10 @@ class Forest:
                 indent.append("│ ")
         return "\n".join(lines)
 
+    def __matmul__(self, other):
+        """Return product self @ other (other is a Forest or HyperForest)."""
+        return HyperForest(self, other)
+
     def __sub__(self, other):
         """Return new Forest of nodes in self not other (difference)."""
         return Forest(
@@ -700,9 +704,18 @@ class Forest:
 
     # node methods:
 
-    def root(self):
-        """Return root if one tree else None."""
-        return self._roots[0] if len(self._roots) == 1 else None
+    def root(self, node=None):
+        """Return root of single tree, root of given node, or None."""
+        if len(self.roots()) == 1:
+            return self.roots()[0]
+        elif node is not None and len(self.roots()) > 1:
+            climber = node
+            while self.is_nonroot(climber):
+                climber = self.parent(climber)
+                climber = self.full(climber)
+            return climber
+        else:
+            return None
 
     def roots(self):
         """Return tuple of roots of trees in forest."""
@@ -741,10 +754,10 @@ class Forest:
 
     def lateral(self, node):
         """Return ordered tuple of the given node's lateral children."""
-        if node == self._tip[node]:
-            return self._children[node]
+        if node == self.tip(node):
+            return self.children(node)
         else:
-            return self._children[node][1:]
+            return self.children(node)[1:]
 
     def full(self, node):
         """Return the largest region with same argext as the given node."""
@@ -762,10 +775,7 @@ class Forest:
 
     def root_path(self, node):
         """Yield nodes on the parent path from given node to its root."""
-        yield node
-        while self.is_nonroot(node):
-            node = self.parent(node)
-            yield node
+        yield from self.path(node, self.root(node), self.parent)
 
     def main_path(self, node):
         """Yield nodes on the main_child path from given node to its tip."""
@@ -877,7 +887,9 @@ class Forest:
         else:
             roots = (localroot,)
         filter = list(nodes)
-        countdown = {n: len(self.children(n)) for n in self.subtree(localroot)}
+        countdown = {
+            n: len(self.children(n)) for root in roots for n in self.subtree(root)
+        }
 
         # Recursive "bottom-up" search via parents:
         def _yield_or_propagate(node):
@@ -889,8 +901,9 @@ class Forest:
                 if countdown[parent] == 0:
                     yield from _yield_or_propagate(parent)
 
-        for node in self.leaf_nodes(localroot):
-            yield from _yield_or_propagate(node)
+        for root in roots:
+            for node in self.leaf_nodes(root):
+                yield from _yield_or_propagate(node)
 
     def outermost(self, nodes, localroot=None):
         """Yield outermost nodes of the given nodes."""
@@ -1124,24 +1137,24 @@ class HyperTree(Tree):
 
 
 class HyperForest(Forest):
-    """Tree of higher-dimensional regions.
+    """Forest of trees of higher-dimensional regions.
 
-    A HyperTree represents the hierarchical nesting of peak regions
-    or valley regions in more dimensions, such as a mountain landscape
+    A HyperForest represents the hierarchical nesting of peak regions
+    or valley regions in more dimensions, for example, a mountain landscape
     with height z as a function of x and y.
 
-    A HyperTree assumes dimensional decoupling, i.e. the landscape is a
-    sum z(x,y) = f(x) + g(y) or a product z(x,y) = f(x) * g(y).
+    A HyperForest assumes dimensional decoupling, for example, a
+    landscape z(x, y) that is a sum f(x) + g(y) or product f(x) * g(y).
 
-    A HyperTree is constructed as a pair of trees that are
-    of type Tree or HyperTree.
+    A HyperForest is constructed as a pair of forests that are
+    of type Forest or HyperForest.
 
-    A HyperTree is a kind of product tree, but it is not the Cartesian
+    A HyperForest is a kind of product tree, but it is not a Cartesian
     product.
 
     Notes
     -----
-    Background literature for the HyperTree class is
+    Background literature for the HyperForest class is
     the subsection titled "2D peaks" in the article [1]_.
 
     References
@@ -1152,33 +1165,44 @@ class HyperForest(Forest):
        Open access: https://doi.org/10.1186/1748-7188-3-10
     """
 
-    def __init__(self, left_tree, right_tree):
-        self.L = left_tree
-        self.R = right_tree
+    # dunder methods:
+
+    def __init__(self, left_forest, right_forest):
+        """Initialize HyperForest from pair of Forest or HyperForest objects."""
+        self.L = left_forest
+        self.R = right_forest
 
     def __contains__(self, pair):
-        """Return True if the input is a node in the HyperTree."""
+        """Return True if the input is a node in the HyperForest."""
         a, b = pair
-        # test if (a, b) is 'parent-above':
+        # test if (a, b) is 'parent-above' or 'below-leaf':
         return (
-            a == self.L.root() or self.L.size(self.L.parent(a)) > self.R.size(b)
-        ) and (b == self.R.root() or self.R.size(self.R.parent(b)) > self.L.size(a))
+            a in self.L.roots()
+            or self.L.size(self.L.parent(a)) > self.R.size(b)
+            or (not self.R.has_children(b) and self.R.size(b) >= self.L.size(a))
+        ) and (
+            b in self.R.roots()
+            or self.R.size(self.R.parent(b)) > self.L.size(a)
+            or (not self.L.has_children(a) and self.L.size(a) >= self.R.size(b))
+        )
 
     def __iter__(self):
-        """Iterate over nodes in the HyperTree."""
+        """Iterate over nodes in the HyperForest."""
         yield from self.subtree()
 
     def __len__(self):
-        """Return number of nodes in the HyperTree."""
+        """Return number of nodes in the HyperForest."""
         return len(list(self.__iter__()))
 
     def __repr__(self) -> str:
-        """Return string that can reconstruct the HyperTree."""
-        return f"HyperTree({repr(self.L)}, {repr(self.R)})"
+        """Return string that can reconstruct the HyperForest."""
+        return f"HyperForest({repr(self.L)}, {repr(self.R)})"
 
-    def root(self):
-        """Return the root node of the HyperTree."""
-        return (self.L.root(), self.R.root())
+    # node methods:
+
+    def roots(self):
+        """Return tuple of roots of trees in HyperForest."""
+        return tuple((a, b) for a in self.L.roots() for b in self.R.roots())
 
     def is_nonroot(self, node):
         """Return True if given node has a parent."""
@@ -1188,7 +1212,10 @@ class HyperForest(Forest):
     def tip(self, node):
         """Return the given node's tip node."""
         a, b = node
-        return (self.L.tip(a), self.R.tip(b))
+        climber = (self.L.tip(a), self.R.tip(b))
+        while climber not in self:
+            climber = self.parent(climber)
+        return climber
 
     def has_children(self, node):
         """Return True if given node has children."""
@@ -1198,7 +1225,12 @@ class HyperForest(Forest):
     def size(self, node):
         """Return the given node's size."""
         a, b = node
-        return max(self.L.size(a), self.R.size(b))
+        if (not self.L.has_children(a) and self.L.size(a) > self.R.size(b)) or (
+            not self.R.has_children(b) and self.L.size(a) < self.R.size(b)
+        ):
+            return min(self.L.size(a), self.R.size(b))
+        else:
+            return max(self.L.size(a), self.R.size(b))
 
     def parent(self, node):
         """Return the given node's parent or None."""
@@ -1223,64 +1255,78 @@ class HyperForest(Forest):
     def children(self, node):
         """Return the given node's children."""
         a, b = node
-        if not self.has_children(node):
+        if self.L.has_children(a) and self.R.has_children(b):
+            if self.L.size(a) > self.R.size(b):
+                return tuple((ca, b) for ca in self.L.children(a))
+            elif self.L.size(a) < self.R.size(b):
+                return tuple((a, cb) for cb in self.R.children(b))
+            elif self.L.size(a) == self.R.size(b):
+                return tuple(
+                    (ca, cb) for ca in self.L.children(a) for cb in self.R.children(b)
+                )
+        elif not self.L.has_children(a) and not self.R.has_children(b):
             return ()
-        elif self.L.size(a) > self.R.size(b):
+        elif self.L.has_children(a):
             return tuple((ca, b) for ca in self.L.children(a))
-        elif self.L.size(a) < self.R.size(b):
+        else:
             return tuple((a, cb) for cb in self.R.children(b))
-        elif self.L.size(a) == self.R.size(b):
-            return tuple(
-                (ca, cb) for ca in self.L.children(a) for cb in self.R.children(b)
-            )
 
     def main_child(self, node):
         """Return the main child (the child that has the same tip)."""
         a, b = node
-        if not self.has_children(node):
+        if (children := self.children(node)) == ():
             return None
-        elif self.L.size(a) > self.R.size(b):
-            return (self.L.main_child(a), b)
-        elif self.L.size(a) < self.R.size(b):
-            return (a, self.R.main_child(b))
-        elif self.L.size(a) == self.R.size(b):
-            return (self.L.main_child(a), self.R.main_child(b))
+        else:
+            a1, b1 = children[0]
+            if self.L.tip(a1) == self.L.tip(a) and self.R.tip(b1) == self.R.tip(b):
+                return a1, b1
+            else:
+                return None
 
     def full(self, node):
         """Return the largest node with same tip as given node."""
-        climber = node
-        while self.is_nonroot(climber) and self.tip(climber) == self.tip(
-            nextstep := self.parent(climber)
-        ):
-            climber = nextstep
+        a, b = node
+        climber = (self.L.full(a), self.R.full(b))
+        while climber not in self:
+            climber = self.main_child(climber)
         return climber
+
+    # generator methods (yielding nodes):
+
+    def leaf_nodes(self, localroot=None):
+        """Yield leaf nodes."""
+        # defaults:
+        if localroot is None:
+            roots = self.roots()
+        else:
+            roots = (localroot,)
+        for ra, rb in roots:
+            for a in self.L.leaf_nodes(localroot=ra):
+                for b in self.R.leaf_nodes(localroot=rb):
+                    yield a, b
+
+    def size_filter(self, localroot=None, *, maxsize=None):
+        """Yield grid nodes in given subtree."""
+        # defaults:
+        if localroot is None:
+            roots = self.roots()
+        else:
+            roots = (localroot,)
+        if maxsize is None:
+            maxsize = 0.2 * max(self.size(root) for root in self.roots())
+        for ra, rb in roots:
+            for a in self.L.size_filter(maxsize=maxsize, localroot=ra):
+                for b in self.R.size_filter(maxsize=maxsize, localroot=rb):
+                    yield a, b
+
+    # Implementation details (may change):
 
     def _index(self, node):
         """Return a tuple of (nested) indices for given node."""
         a, b = node
         return self.L._index(a), self.R._index(b)
 
-    def leaf_nodes(self, localroot=None):
-        """Yield leaf nodes."""
-        # defaults:
-        if localroot is None:
-            localroot = self.root()
-        ra, rb = localroot
-        for a in self.L.leaf_nodes(localroot=ra):
-            for b in self.R.leaf_nodes(localroot=rb):
-                yield a, b
-
-    def size_filter(self, localroot=None, *, maxsize=None):
-        """Yield grid nodes in given subtree."""
-        # defaults:
-        if localroot is None:
-            localroot = self.root()
-        if maxsize is None:
-            maxsize = 0.2 * max(self.L.size(self.L.root()), self.R.size(self.R.root()))
-        ra, rb = localroot
-        for a in self.L.size_filter(maxsize=maxsize, localroot=ra):
-            for b in self.R.size_filter(maxsize=maxsize, localroot=rb):
-                yield a, b
+    # Forest methods that are not HyperForest methods:
 
     def from_peaks(self):
         """Return that it is NotImplemented."""
@@ -1302,6 +1348,22 @@ class HyperForest(Forest):
         """Return that it is NotImplemented."""
         return NotImplemented
 
-    def _find_full(self):
+    def _find_full_parent(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def __sub__(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def __and__(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def __or__(self):
+        """Return that it is NotImplemented."""
+        return NotImplemented
+
+    def __xor__(self):
         """Return that it is NotImplemented."""
         return NotImplemented
