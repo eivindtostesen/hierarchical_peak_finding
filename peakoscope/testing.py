@@ -193,7 +193,7 @@ def assert_size_filter_equals_definition(tree, fractions=None):
     """
     if fractions is None:
         fractions = (-0.1, 0.0, 0.2, 0.6, 2.0)
-    rootsize = max(tree.size(root) for root in tree.roots())
+    rootsize = max((tree.size(root) for root in tree.roots()), default=0)
     for maxsize in (fraction * rootsize for fraction in fractions):
         assert set(tree.size_filter(maxsize=maxsize)) == set(
             x
@@ -207,7 +207,7 @@ def assert_size_filter_equals_outermost_of_below_maxsize(tree, fractions=None):
     """Assert size_filter produces the outermost of all nodes below maxsize."""
     if fractions is None:
         fractions = (-0.1, 0.0, 0.2, 0.6, 2.0)
-    rootsize = max(tree.size(root) for root in tree.roots())
+    rootsize = max((tree.size(root) for root in tree.roots()), default=0)
     for maxsize in (fraction * rootsize for fraction in fractions):
         assert set(tree.size_filter(maxsize=maxsize)) == (
             set(tree.outermost(x for x in tree if tree.size(x) < maxsize))

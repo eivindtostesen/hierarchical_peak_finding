@@ -561,37 +561,49 @@ class Forest:
         obj._tip = {}
         obj._full = {}
         obj._roots = []
-        stack = []
-        for (A, a), (B, b) in pairwise(levelsdict.items()):
-            if not stack:
-                _make_root(A)  # the first element is a root
-                stack = [A]
-            if b == 0:  # B is a root
-                _make_leaf(A)
-                _make_root(B)
-                stack = [B]
-            elif b == a + 1:
-                children[A] = [B]  # B is the first child of A
-                obj._parent[B] = A
-                if Forest.getargext(A) == Forest.getargext(
-                    stack[-1]
-                ):  # main path continues
-                    obj._full[B] = obj._full[A]
-                else:  # main path ends at A
-                    _make_tip(A)
+        if len(levelsdict) == 0:
+            obj._roots = ()
+            return obj
+        elif len(levelsdict) == 1:
+            root, _ = levelsdict.popitem()
+            obj._parent[root] = None
+            obj._children = {root: ()}
+            obj._tip[root] = root
+            obj._full[root] = root
+            obj._roots = (root,)
+            return obj
+        else:  # len(levelsdict) > 1
+            stack = []
+            for (A, a), (B, b) in pairwise(levelsdict.items()):
+                if not stack:
+                    _make_root(A)  # the first element is a root
+                    stack = [A]
+                if b == 0:  # B is a root
+                    _make_leaf(A)
+                    _make_root(B)
+                    stack = [B]
+                elif b == a + 1:
+                    children[A] = [B]  # B is the first child of A
+                    obj._parent[B] = A
+                    if Forest.getargext(A) == Forest.getargext(
+                        stack[-1]
+                    ):  # main path continues
+                        obj._full[B] = obj._full[A]
+                    else:  # main path ends at A
+                        _make_tip(A)
+                        obj._full[B] = B
+                    stack.append(B)
+                else:  # then a >= b > 0:
+                    _make_leaf(A)  # A is a leaf and tip
                     obj._full[B] = B
-                stack.append(B)
-            else:  # then a >= b > 0:
-                _make_leaf(A)  # A is a leaf and tip
-                obj._full[B] = B
-                del stack[b:]  # remove finished nodes
-                children[stack[-1]].append(B)  # B is a lateral child
-                obj._parent[B] = stack[-1]
-                stack.append(B)
-        _make_leaf(B)  # the last element is a leaf and tip
-        obj._children = {p: tuple(c) for p, c in children.items()}
-        obj._roots = tuple(obj._roots)
-        return obj
+                    del stack[b:]  # remove finished nodes
+                    children[stack[-1]].append(B)  # B is a lateral child
+                    obj._parent[B] = stack[-1]
+                    stack.append(B)
+            _make_leaf(B)  # the last element is a leaf and tip
+            obj._children = {p: tuple(c) for p, c in children.items()}
+            obj._roots = tuple(obj._roots)
+            return obj
 
     # dunder methods:
 
@@ -865,7 +877,7 @@ class Forest:
         else:
             roots = (localroot,)
         if maxsize is None:
-            maxsize = 0.2 * max(self.size(root) for root in self.roots())
+            maxsize = 0.2 * max((self.size(root) for root in self.roots()), default=0)
         # The 'MAXDEEP algorithm' in reverse:
         for root in roots:
             for climber in self.main_path(root):
@@ -1313,7 +1325,7 @@ class HyperForest(Forest):
         else:
             roots = (localroot,)
         if maxsize is None:
-            maxsize = 0.2 * max(self.size(root) for root in self.roots())
+            maxsize = 0.2 * max((self.size(root) for root in self.roots()), default=0)
         for ra, rb in roots:
             for a in self.L.size_filter(maxsize=maxsize, localroot=ra):
                 for b in self.R.size_filter(maxsize=maxsize, localroot=rb):
