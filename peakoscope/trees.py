@@ -607,7 +607,7 @@ class Forest:
 
     # dunder methods:
 
-    def __init__(self, peaks, *, are_valleys=False, presorted=False):
+    def __init__(self, peaks=(), *, are_valleys=False, presorted=False):
         """Initialize Forest from iterable of peak (or valley) regions."""
         self.are_valleys = are_valleys
         self._roots, self._children, self._tip = forest_from_peaks(

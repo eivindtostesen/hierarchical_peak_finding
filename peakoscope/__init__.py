@@ -35,13 +35,20 @@ Copyright (C) 2021-2025 Eivind Tøstesen. This software is licensed under GPL-3.
 """
 
 
-__version__ = "1.2.0.dev9"
+__version__ = "1.2.0.dev10"
 
 
 # Import names:
 from peakoscope.errors import PeakyBlunder
 from peakoscope.utilities import ChainedAttributes
-from peakoscope.trees import tree_from_peaks, forest_from_peaks, Tree, HyperTree, Forest
+from peakoscope.trees import (
+    tree_from_peaks,
+    forest_from_peaks,
+    Tree,
+    HyperTree,
+    Forest,
+    HyperForest,
+)
 from peakoscope.peaks import find_peaks, find_valleys, Scope6, Region, Scope
 from peakoscope.formats import TreeStrings
 from peakoscope.data import example_1, example_2
