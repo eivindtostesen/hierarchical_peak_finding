@@ -119,7 +119,7 @@ def is_forest(request):
 
 def prune1(f):
     """Strip input forest of roots and some leafs."""
-    return f - f.roots() - set(n for n in f.leaf_nodes() if f.full(n) != f.tip(n))
+    return f - f.roots() - (set(f.leaf_nodes()) - set(f.full_nodes()))
 
 
 @pytest.fixture(params=[lambda f: f, prune1])
@@ -224,7 +224,6 @@ def test_hyperforest(hyperforest):
     assert_all_assertions(hyperforest)
     assert_parents_and_children_belong_to_tree(hyperforest)
     assert_grid_nodes_belong_to_tree(hyperforest)
-    assert_leafs_belong_to_tree(hyperforest)
     assert_parent_size_equals_minimum(hyperforest)
 
 
@@ -262,7 +261,7 @@ def test_zero_element(all_data):
     """Test that an empty Forest is a zero element."""
     forest = peakoscope.tree(all_data, forest=True)
     zero = Forest()
-    len(zero) == len(forest @ zero) == len(zero @ forest) == 0
+    assert len(zero) == len(forest @ zero) == len(zero @ forest) == 0
 
 
 def test_non_linear_tree(zigzag_data, is_forest):

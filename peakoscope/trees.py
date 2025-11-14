@@ -1187,16 +1187,10 @@ class HyperForest(Forest):
     def __contains__(self, pair):
         """Return True if the input is a node in the HyperForest."""
         a, b = pair
-        # test if (a, b) is 'parent-above' or 'below-leaf':
+        # test if (a, b) is 'parent-above':
         return (
-            a in self.L.roots()
-            or self.L.size(self.L.parent(a)) > self.R.size(b)
-            or (not self.R.has_children(b) and self.R.size(b) >= self.L.size(a))
-        ) and (
-            b in self.R.roots()
-            or self.R.size(self.R.parent(b)) > self.L.size(a)
-            or (not self.L.has_children(a) and self.L.size(a) >= self.R.size(b))
-        )
+            a in self.L.roots() or self.L.size(self.L.parent(a)) > self.R.size(b)
+        ) and (b in self.R.roots() or self.R.size(self.R.parent(b)) > self.L.size(a))
 
     def __iter__(self):
         """Iterate over nodes in the HyperForest."""
@@ -1232,17 +1226,17 @@ class HyperForest(Forest):
     def has_children(self, node):
         """Return True if given node has children."""
         a, b = node
-        return self.L.has_children(a) or self.R.has_children(b)
+        if self.L.size(a) > self.R.size(b):
+            return self.L.has_children(a)
+        elif self.L.size(a) < self.R.size(b):
+            return self.R.has_children(b)
+        elif self.L.size(a) == self.R.size(b):
+            return self.L.has_children(a) and self.R.has_children(b)
 
     def size(self, node):
         """Return the given node's size."""
         a, b = node
-        if (not self.L.has_children(a) and self.L.size(a) > self.R.size(b)) or (
-            not self.R.has_children(b) and self.L.size(a) < self.R.size(b)
-        ):
-            return min(self.L.size(a), self.R.size(b))
-        else:
-            return max(self.L.size(a), self.R.size(b))
+        return max(self.L.size(a), self.R.size(b))
 
     def parent(self, node):
         """Return the given node's parent or None."""
@@ -1267,33 +1261,29 @@ class HyperForest(Forest):
     def children(self, node):
         """Return the given node's children."""
         a, b = node
-        if self.L.has_children(a) and self.R.has_children(b):
-            if self.L.size(a) > self.R.size(b):
-                return tuple((ca, b) for ca in self.L.children(a))
-            elif self.L.size(a) < self.R.size(b):
-                return tuple((a, cb) for cb in self.R.children(b))
-            elif self.L.size(a) == self.R.size(b):
-                return tuple(
-                    (ca, cb) for ca in self.L.children(a) for cb in self.R.children(b)
-                )
-        elif not self.L.has_children(a) and not self.R.has_children(b):
-            return ()
-        elif self.L.has_children(a):
+        if self.L.size(a) > self.R.size(b) and self.L.has_children(a):
             return tuple((ca, b) for ca in self.L.children(a))
-        else:
+        elif self.L.size(a) < self.R.size(b) and self.R.has_children(b):
             return tuple((a, cb) for cb in self.R.children(b))
+        elif (
+            self.L.size(a) == self.R.size(b)
+            and self.L.has_children(a)
+            and self.R.has_children(b)
+        ):
+            return tuple(
+                (ca, cb) for ca in self.L.children(a) for cb in self.R.children(b)
+            )
+        else:
+            return ()
 
     def main_child(self, node):
         """Return the main child (the child that has the same tip)."""
         a, b = node
-        if (children := self.children(node)) == ():
-            return None
-        else:
-            a1, b1 = children[0]
+        if self.has_children(node):
+            a1, b1 = self.children(node)[0]
             if self.L.tip(a1) == self.L.tip(a) and self.R.tip(b1) == self.R.tip(b):
                 return a1, b1
-            else:
-                return None
+        return None
 
     def full(self, node):
         """Return the largest node with same tip as given node."""
@@ -1304,18 +1294,6 @@ class HyperForest(Forest):
         return climber
 
     # generator methods (yielding nodes):
-
-    def leaf_nodes(self, localroot=None):
-        """Yield leaf nodes."""
-        # defaults:
-        if localroot is None:
-            roots = self.roots()
-        else:
-            roots = (localroot,)
-        for ra, rb in roots:
-            for a in self.L.leaf_nodes(localroot=ra):
-                for b in self.R.leaf_nodes(localroot=rb):
-                    yield a, b
 
     def size_filter(self, localroot=None, *, maxsize=None):
         """Yield grid nodes in given subtree."""
