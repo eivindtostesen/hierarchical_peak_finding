@@ -5,13 +5,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Python module for testing.
 
-Collection of assertion functions for use in testing.
+A collection of assertion functions for use in testing.
 
 Two of the functions assert equality between objects.
 
 The other 19 functions assert expected tree properties.
-Input to each of these is either a Tree, HyperTree
-or Forest object.
+Input to each of these is of type Tree, HyperTree
+Forest or HyperForest.
 
 Usage examples:
 ---------------
@@ -90,7 +90,7 @@ def assert_root_is_outermost_and_leafs_are_innermost(tree):
 
 
 def assert_tree_consists_of_children_and_root(tree):
-    """Assert all nodes are children or root."""
+    """Assert all nodes are children or roots."""
     assert set(tree) == (
         set(chain.from_iterable(tree.children(x) for x in tree)) | set(tree.roots())
     )
@@ -179,7 +179,7 @@ def assert_parent_size_is_strictly_greater(tree):
 
 
 def assert_if_local_extremum_then_leaf(tree):
-    """Assert zero-size nodes are included in leaf nodes."""
+    """Assert size zero implies leaf node."""
     assert set(x for x in tree if tree.size(x) == 0) <= set(tree.leaf_nodes())
 
 

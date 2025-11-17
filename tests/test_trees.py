@@ -56,14 +56,14 @@ def assert_main_children_keep_argext_lateral_children_move_away(tree):
 
 
 def assert_dict_of_dicts_of_same_length(tree):
-    """Assert tree length equals dict sizes."""
+    """Assert tree or forest length equals dict sizes."""
     assert all(
         len(tree) == len(d) for d in tree.as_dict_of_dicts().values() if type(d) == dict
     )
 
 
 def assert_parents_and_children_belong_to_tree(tree):
-    """Assert that hyper parent and children methods produce tree nodes.
+    """Assert that hyper parent and children methods produce tree or forest nodes.
 
     See also Proposition 4.
     """
@@ -74,7 +74,7 @@ def assert_parents_and_children_belong_to_tree(tree):
 
 
 def assert_grid_nodes_belong_to_tree(tree):
-    """Assert that hyper size_filter produces tree nodes.
+    """Assert that hyper size_filter produces tree or forest nodes.
 
     See also Proposition 7.
     """
@@ -82,7 +82,7 @@ def assert_grid_nodes_belong_to_tree(tree):
 
 
 def assert_leafs_belong_to_tree(tree):
-    """Assert that hyper leaf_nodes produces tree nodes."""
+    """Assert that hyper leaf_nodes produces tree or forest nodes."""
     assert all(x in tree for x in tree.leaf_nodes())
 
 
@@ -265,7 +265,7 @@ def test_zero_element(all_data):
 
 
 def test_non_linear_tree(zigzag_data, is_forest):
-    """Assert that zigzag data gives tree without linear nodes."""
+    """Assert that zigzag data gives tree or forest without linear nodes."""
     assert len(list(peakoscope.tree(zigzag_data, forest=is_forest).linear_nodes())) == 0
 
 
@@ -327,9 +327,9 @@ def test_tree_set_nodes(data1):
 
 def test_forest_set_nodes(data1):
     """Test the method Forest.set_nodes."""
-    # create tree with nodes of type Scope:
+    # create forest with nodes of type Scope:
     scope_tree = peakoscope.tree(data1, forest=True)
-    # create tree with nodes of type Scope6:
+    # create forest with nodes of type Scope6:
     scope6_tree = Forest.from_peaks(map(lambda t: Scope6(*t), find_peaks(data1)))
     # lists of nodes are NOT equal:
     assert list(scope_tree) != list(scope6_tree)

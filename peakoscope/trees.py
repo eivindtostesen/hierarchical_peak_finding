@@ -10,8 +10,8 @@ for building trees that represent the hierarchical nesting
 of regions and subregions containing peaks or valleys
 in numeric one-dimensional or higher-dimensional data.
 
-The tree classes provide methods for
-searching, sorting and selecting regions.
+Tree and forest classes provide methods for filtering,
+traversing, partitioning, pruning, grafting and serializing.
 
 """
 
@@ -104,7 +104,7 @@ def forest_from_peaks(
 
 
 class Tree:
-    """Tree of regions in univariate data.
+    """Tree of nested regions.
 
     A Tree represents the hierarchical nesting of
     peak or valley regions in 1D data such as a sequence of numbers,
@@ -479,7 +479,7 @@ class Tree:
 
 
 class Forest:
-    """Trees of regions in univariate data.
+    """Trees of nested regions.
 
     A Forest represents the hierarchical nesting of
     peak or valley regions in 1D data such as a sequence of numbers,
@@ -663,25 +663,25 @@ class Forest:
         return HyperForest(self, other)
 
     def __sub__(self, other):
-        """Return new Forest of nodes in self not other (difference)."""
+        """Return new Forest from nodes in difference: set(self) - set(other)."""
         return Forest(
             set(self) - set(other), are_valleys=self.are_valleys, presorted=False
         )
 
     def __and__(self, other):
-        """Return new Forest of nodes in self and other (intersection)."""
+        """Return new Forest from nodes in intersection: set(self) & set(other)."""
         return Forest(
             set(self) & set(other), are_valleys=self.are_valleys, presorted=False
         )
 
     def __or__(self, other):
-        """Return new Forest of nodes in self or other (union)."""
+        """Return new Forest from nodes in union: set(self) | set(other)."""
         return Forest(
             set(self) | set(other), are_valleys=self.are_valleys, presorted=False
         )
 
     def __xor__(self, other):
-        """Return new Forest of nodes in either self or other (symmetric difference)."""
+        """Return new Forest from nodes in symmetric difference: set(self) ^ set(other)."""
         return Forest(
             set(self) ^ set(other), are_valleys=self.are_valleys, presorted=False
         )
@@ -778,7 +778,7 @@ class Forest:
     # generator methods (yielding nodes):
 
     def path(self, start, istop, step):
-        """Yield nodes on a path in the tree."""
+        """Yield nodes on a path in a tree."""
         climber = start
         yield climber
         while climber != istop:

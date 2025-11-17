@@ -23,7 +23,7 @@ argmin
 
 branching node
   A node that has two or more children.
-  Implemented in method ``Tree.branch_nodes()``.
+  Implemented in tree or forest method ``branch_nodes()``.
   See also leaf node and linear node.
 
 cutoff
@@ -38,11 +38,19 @@ extremum
   Maximum of a peak region. Minimum of a valley region.
   See also argext.
 
+forest
+  A forest consists of zero, one or more trees of nested regions.
+  The roots of a forest are the roots of its trees.
+  Each node in a forest has a unique root.
+  Implemented in the classes ``Forest`` and ``HyperForest``,
+  that are containers of nodes, not trees.
+  See also tree.
+
 full node
   The outermost of all nodes having the same argext.
   "Full" as in "full lake".
   A node is full if and only if it is not a main child.
-  Implemented in the methods ``Tree.full()`` and ``Tree.full_nodes()``.
+  Implemented in the tree or forest methods ``full()`` and ``full_nodes()``.
   See also tip node.
 
 ``i:j``
@@ -53,7 +61,7 @@ innermost node
   An innermost node of a subset of nodes is a
   node in the subset that has no descendants in the subset.
   Other nodes in the subset are not nested inside an innermost node.
-  Implemented in method ``Tree.innermost()``.
+  Implemented in tree or forest method ``innermost()``.
   See also outermost node.
 
 ``istop``
@@ -64,39 +72,39 @@ innermost node
 lateral child
   A child node that has a different argext than its parent.
   "Lateral" as in "lateral branch".
-  Implemented in methods ``Tree.lateral()`` and ``Tree.lateral_descendants()``.
+  Implemented in tree or forest methods ``lateral()`` and ``lateral_descendants()``.
   See also main child.
 
 leaf node
   A node that has no children.
-  Implemented in method ``Tree.leaf_nodes()``.
+  Implemented in tree or forest method ``leaf_nodes()``.
   See also linear node and branching node.
 
 level
   Number of steps to the root, in other words, a root node has level 0,
   its children have level 1, grandchildren level 2, etc.
-  Implemented in method ``Tree.levels()``.
+  Implemented in tree or forest method ``levels()``.
 
 linear node
   A node that has one child.
-  Implemented in method ``Tree.linear_nodes()``.
+  Implemented in tree or forest method ``linear_nodes()``.
   See also leaf node and branching node.
 
 local maximum
-  A region containing equal values where all surrounding (``pre`` and ``post``) values
-  are less than the value in the region.
+  A region containing equal values where all surrounding
+  (``pre`` and ``post``) values are less than the value in the region.
   The definition is implemented in the method ``Region.is_local_maximum()``.
   See also peak.
 
 local minimum
-  A region containing equal values where all surrounding (``pre`` and ``post``) values
-  are greater than the value in the region.
+  A region containing equal values where all surrounding
+  (``pre`` and ``post``) values are greater than the value in the region.
   The definition is implemented in the method ``Region.is_local_minimum()``.
   See also valley.
 
 main child
   A child node that has the same argext as its parent.
-  Implemented in methods ``Tree.main_child()`` and ``Tree.main_descendants()``.
+  Implemented in tree or forest methods ``main_child()`` and ``main_descendants()``.
   See also lateral child.
 
 ``max``
@@ -112,14 +120,15 @@ nested region
   ``Region.__lt__()`` and ``Region.__gt__()``.  
 
 node
-  A ``Tree`` node is a ``Scope`` or other hashable object representing a peak or valley.
-  A ``HyperTree`` node is a tuple of nodes.
+  A node in a ``Tree`` or ``Forest`` is a ``Scope`` or other hashable object
+  representing a peak or valley.
+  A node in a ``HyperTree`` or ``HyperForest`` is a tuple of nodes.
 
 outermost node
   An outermost node of a subset of nodes is a
   node in the subset that is not descendant of any node in the subset.
   An outermost node is not nested inside other nodes in the subset.
-  Implemented in method ``Tree.outermost()``.
+  Implemented in tree or forest method ``outermost()``.
   See also innermost node.
 
 parent node
@@ -127,7 +136,8 @@ parent node
 
 path
   Sequence of adjacent nodes in tree.
-  Implemented in methods ``Tree.path()``, ``Tree.root_path()`` and ``Tree.main_path()``. 
+  Implemented in tree or forest methods ``path()``, ``root_path()``
+  and ``main_path()``. 
 
 peak
   A region where all surrounding (``pre`` and ``post``) values
@@ -160,6 +170,7 @@ scope
 size
   The size of region ``r`` is the difference between its maximum and minimum
   or equivalently: ``abs(r.extremum - r.cutoff)``.
+  Implemented in the tree or forest method ``size()``.
 
 ``start``
   The start position of a region.
@@ -171,24 +182,24 @@ size
   See also ``istop``.
 
 subarray
-  A new sequence corresponding to a region.
+  A new sequence (slice) based on a region.
   Implemented in the method ``Region.subarray()``.
 
 subtree
   A node and all its descendants.
-  Implemented in the method ``Tree.subtree()``.
+  Implemented in the tree or forest method ``subtree()``.
 
 tip node
   The innermost of all nodes having the same argext.
   "Tip" as in "fingertip" or "tip of the iceberg".
   A node is a tip if and only if it has no main child.
-  Implemented in the method ``Tree.tip()``.
+  Implemented in the tree or forest method ``tip()``.
   See also full node.
 
 tree
-  A graph of nested peak regions or valley regions.
+  A single-root graph of nested peak regions or valley regions.
   Implemented in the function ``tree()`` and classes ``Tree`` and ``HyperTree``.
-  See also nested region.
+  See also forest.
 
 valley
   A region where all surrounding (``pre`` and ``post``) values
