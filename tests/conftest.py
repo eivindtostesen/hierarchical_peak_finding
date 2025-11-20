@@ -21,14 +21,14 @@ X2, Y2 = peakoscope.example_2()
 discrete_randomwalk = peakoscope.data.randomwalk(
     start=123,
     steps=peakoscope.data.discrete_steps(
-        length=49, moves=[3, 1, 0, -1, -3], randomseed=None
+        length=59, moves=[3, 1, 0, -1, -3], randomseed=None
     ),
 )
 
 
 continuous_randomwalk = peakoscope.data.randomwalk(
     start=123.0,
-    steps=peakoscope.data.continuous_steps(length=49, moves=[3, -3], randomseed=None),
+    steps=peakoscope.data.continuous_steps(length=59, moves=[3, -3], randomseed=None),
 )
 
 
@@ -42,6 +42,8 @@ zigzag_randomwalk = peakoscope.data.randomwalk(
 
 
 # Pathological data sets:
+
+
 empty = []
 singleton = [123]
 flat = [123, 123]
@@ -53,19 +55,34 @@ nosignal = [123.0, 123.0, 123.0, 123.0, 123.0, 123.0, 123.0, 123.0, 123.0]
 # Test data:
 
 
-@pytest.fixture(
-    params=[
-        discrete_randomwalk,
-        continuous_randomwalk,
-        zigzag_randomwalk,
-        Y1,
-        Y2,
-        flat,
-        up,
-        down,
-        nosignal,
-    ]
-)
+datasets = [
+    empty,
+    singleton,
+    flat,
+    up,
+    down,
+    nosignal,
+    Y1,
+    Y2,
+    discrete_randomwalk,
+    continuous_randomwalk,
+    zigzag_randomwalk,
+]
+
+
+@pytest.fixture(params=datasets)
+def all_data(request):
+    data = request.param
+    return data
+
+
+@pytest.fixture(params=[singleton, flat, nosignal])
+def flat_data(request):
+    data = request.param
+    return data
+
+
+@pytest.fixture(params=datasets[2:])
 def data0(request):
     data = request.param
     return data
@@ -77,13 +94,25 @@ def zigzag_data(request):
     return data
 
 
-@pytest.fixture(params=[discrete_randomwalk, continuous_randomwalk, zigzag_randomwalk])
+@pytest.fixture(
+    params=[
+        discrete_randomwalk[:40],
+        continuous_randomwalk[:40],
+        zigzag_randomwalk[:40],
+    ]
+)
 def data1(request):
     data = request.param
     return data
 
 
-@pytest.fixture(params=[discrete_randomwalk, continuous_randomwalk, zigzag_randomwalk])
+@pytest.fixture(
+    params=[
+        discrete_randomwalk[40:],
+        continuous_randomwalk[40:],
+        zigzag_randomwalk[40:],
+    ]
+)
 def data2(request):
     data = request.param
     return data

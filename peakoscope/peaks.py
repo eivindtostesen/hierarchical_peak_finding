@@ -44,7 +44,7 @@ Scope6(start=0, istop=9, argext=9, argcut=0, extremum=80, cutoff=10)
 
 from collections import namedtuple
 from operator import lt, gt, le, ge
-from peakoscope.utilities import pairwise
+from peakoscope.utilities import pairwise, sample_iterator
 from peakoscope.errors import PeakyBlunder
 
 
@@ -53,32 +53,37 @@ from peakoscope.errors import PeakyBlunder
 
 def find_peaks(values, reverse=False):
     """Yield peak regions as tuples: (start, istop, argext, argcut, extremum, cutoff)."""
-    if not reverse:
-        lessthan, greaterthan, greater_equal = lt, gt, ge
-    else:
-        lessthan, greaterthan, greater_equal = gt, lt, le
-    regions = []
-    for i, (y1, y2) in enumerate(pairwise(values)):
-        if i == 0:  # first data point:
-            regions.append([i, None, i, i, y1, y1])
-        if greaterthan(y2, y1):  # if uphill:
-            for r in reversed(regions):
-                if greater_equal(r[4], y2):
-                    break
-                r[2], r[4] = i + 1, y2  # update argext and extremum value
-            regions.append([i + 1, None, i + 1, i + 1, y2, y2])
-        elif y2 == y1:
-            pass  # region already created
-        elif lessthan(y2, y1):  # if downhill:
-            while regions and lessthan(y2, regions[-1][5]):
-                popped = regions.pop()
-                popped[1] = i  # update istop value
-                yield tuple(popped)
-            if not (regions and y2 == regions[-1][5]):
-                regions.append([popped[0], None, popped[2], i + 1, popped[4], y2])
-    for r in reversed(regions):
-        r[1] = i + 1  # use last i value
-        yield tuple(r)
+    sample, values = sample_iterator(values)
+    if len(sample) == 1:
+        y = sample.pop()
+        yield (0, 0, 0, 0, y, y)
+    elif len(sample) > 1:
+        if not reverse:
+            lessthan, greaterthan, greater_equal = lt, gt, ge
+        else:
+            lessthan, greaterthan, greater_equal = gt, lt, le
+        regions = []
+        for i, (y1, y2) in enumerate(pairwise(values)):
+            if i == 0:  # first data point:
+                regions.append([i, None, i, i, y1, y1])
+            if greaterthan(y2, y1):  # if uphill:
+                for r in reversed(regions):
+                    if greater_equal(r[4], y2):
+                        break
+                    r[2], r[4] = i + 1, y2  # update argext and extremum value
+                regions.append([i + 1, None, i + 1, i + 1, y2, y2])
+            elif y2 == y1:
+                pass  # region already created
+            elif lessthan(y2, y1):  # if downhill:
+                while regions and lessthan(y2, regions[-1][5]):
+                    popped = regions.pop()
+                    popped[1] = i  # update istop value
+                    yield tuple(popped)
+                if not (regions and y2 == regions[-1][5]):
+                    regions.append([popped[0], None, popped[2], i + 1, popped[4], y2])
+        for r in reversed(regions):
+            r[1] = i + 1  # use last i value
+            yield tuple(r)
 
 
 def find_valleys(values):

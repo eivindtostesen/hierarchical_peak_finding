@@ -5,11 +5,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Python module for testing.
 
-Collection of assertion functions for use in testing.
+A collection of assertion functions for use in testing.
 
 Two of the functions assert equality between objects.
+
 The other 19 functions assert expected tree properties.
-Input to the each of these is either a Tree or a HyperTree object.
+Input to each of these is of type Tree, HyperTree
+Forest or HyperForest.
 
 Usage examples:
 ---------------
@@ -55,11 +57,11 @@ def assert_iteration_produces_members(tree):
 
 
 def assert_leafs_have_no_children_and_root_has_no_parent(tree):
-    """Assert leaf nodes have no children, root has no parent."""
+    """Assert leaf nodes have no children, roots have no parent."""
     assert all(tree.has_children(x) is False for x in tree.leaf_nodes())
     assert all(tree.children(x) == () for x in tree.leaf_nodes())
-    assert tree.is_nonroot(tree.root()) is False
-    assert tree.parent(tree.root()) is None
+    assert all(tree.is_nonroot(root) is False for root in tree.roots())
+    assert all(tree.parent(root) is None for root in tree.roots())
 
 
 def assert_parent_and_children_are_inverse_of_each_other(tree):
@@ -79,8 +81,8 @@ def assert_level_is_length_of_root_path(tree):
 
 
 def assert_root_is_outermost_and_leafs_are_innermost(tree):
-    """Assert root is outermost and leaf nodes are innermost."""
-    assert {tree.root()} == set(tree.outermost(tree))
+    """Assert roots are outermost and leaf nodes are innermost."""
+    assert set(tree.roots()) == set(tree.outermost(tree))
     assert set(tree.leaf_nodes()) == set(tree.innermost(tree))
 
 
@@ -88,9 +90,9 @@ def assert_root_is_outermost_and_leafs_are_innermost(tree):
 
 
 def assert_tree_consists_of_children_and_root(tree):
-    """Assert all nodes are children or root."""
+    """Assert all nodes are children or roots."""
     assert set(tree) == (
-        set(chain.from_iterable(tree.children(x) for x in tree)) | {tree.root()}
+        set(chain.from_iterable(tree.children(x) for x in tree)) | set(tree.roots())
     )
 
 
@@ -114,8 +116,8 @@ def assert_tree_consists_of_full_nodes_and_main_descendants(tree):
 
 
 def assert_full_nodes_consists_of_lateral_descendants_plus_root(tree):
-    """Assert all full nodes are lateral descendants or root."""
-    assert set(tree.full_nodes()) == set(tree.lateral_descendants()) | {tree.root()}
+    """Assert all full nodes are lateral descendants or roots."""
+    assert set(tree.full_nodes()) == set(tree.lateral_descendants()) | set(tree.roots())
 
 
 def assert_children_consist_of_main_child_plus_lateral_children(tree):
@@ -158,9 +160,9 @@ def assert_main_path_shares_tip_and_full(tree):
 
 
 def assert_root_is_full_and_leafs_are_tips(tree):
-    """Assert leaf nodes are tip nodes and root is a full node."""
+    """Assert leaf nodes are tip nodes and roots are full nodes."""
     assert all(tree.tip(x) == x for x in tree.leaf_nodes())
-    assert tree.full(tree.root()) == tree.root()
+    assert all(tree.full(root) == root for root in tree.roots())
 
 
 # node size assertions:
@@ -177,7 +179,7 @@ def assert_parent_size_is_strictly_greater(tree):
 
 
 def assert_if_local_extremum_then_leaf(tree):
-    """Assert zero-size nodes are included in leaf nodes."""
+    """Assert size zero implies leaf node."""
     assert set(x for x in tree if tree.size(x) == 0) <= set(tree.leaf_nodes())
 
 
@@ -191,13 +193,13 @@ def assert_size_filter_equals_definition(tree, fractions=None):
     """
     if fractions is None:
         fractions = (-0.1, 0.0, 0.2, 0.6, 2.0)
-    rootsize = tree.size(tree.root())
+    rootsize = max((tree.size(root) for root in tree.roots()), default=0)
     for maxsize in (fraction * rootsize for fraction in fractions):
         assert set(tree.size_filter(maxsize=maxsize)) == set(
             x
             for x in tree
             if tree.size(x) < maxsize
-            and (x == tree.root() or tree.size(tree.parent(x)) >= maxsize)
+            and (x in tree.roots() or tree.size(tree.parent(x)) >= maxsize)
         )
 
 
@@ -205,7 +207,7 @@ def assert_size_filter_equals_outermost_of_below_maxsize(tree, fractions=None):
     """Assert size_filter produces the outermost of all nodes below maxsize."""
     if fractions is None:
         fractions = (-0.1, 0.0, 0.2, 0.6, 2.0)
-    rootsize = tree.size(tree.root())
+    rootsize = max((tree.size(root) for root in tree.roots()), default=0)
     for maxsize in (fraction * rootsize for fraction in fractions):
         assert set(tree.size_filter(maxsize=maxsize)) == (
             set(tree.outermost(x for x in tree if tree.size(x) < maxsize))

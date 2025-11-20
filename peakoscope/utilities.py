@@ -51,6 +51,7 @@ False
 """
 
 
+from itertools import chain
 from peakoscope.errors import PeakyBlunder
 
 
@@ -64,6 +65,18 @@ def pairwise(iterable):
     for b in it:
         yield a, b
         a = b
+
+
+def sample_iterator(iterable, samplesize=2):
+    """Return a sample and an iterator."""
+    iterator = iter(iterable)
+    sample = []
+    countdown = samplesize
+    for element in iterator:
+        sample.append(element)
+        if (countdown := countdown - 1) == 0:
+            break
+    return sample, chain(sample, iterator)
 
 
 # Classes:
